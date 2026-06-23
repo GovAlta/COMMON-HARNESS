@@ -1,0 +1,43 @@
+{
+  "name": "blueteam-security",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "BlueTeam defensive security assessment scripts and tests",
+  "scripts": {
+    "validate": "node scripts/validate_reports.js",
+    "report:overview": "node scripts/generate_overview_html.js",
+    "report:html": "node scripts/generate_report_html.js",
+    "report:requirements": "node scripts/generate_requirements_report.js",
+    "report:code-changes": "node scripts/generate_code_changes_report.js",
+    "check:coverage": "node scripts/check_skill_coverage.js",
+    "test": "node --test tests/unit/",
+    "test:integration": "node tests/run_tests.js --check",
+    "test:all": "node tests/run_tests.js --all",
+    "security": "node scripts/security-pipeline.js --all",
+    "security:audit": "node scripts/security-pipeline.js --audit",
+    "security:secrets": "node scripts/security-pipeline.js --secrets",
+    "security:sast": "node scripts/security-pipeline.js --sast"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "marked": "^15.0.0"
+  },
+  "devDependencies": {
+    "better-npm-audit": "^3.0.0",
+    "@secretlint/secretlint-rule-preset-recommend": "^8.0.0",
+    "@secretlint/secretlint-rule-aws": "^8.0.0",
+    "@secretlint/secretlint-rule-gcp": "^8.0.0",
+    "@secretlint/secretlint-rule-npm": "^8.0.0",
+    "@secretlint/secretlint-rule-privatekey": "^8.0.0",
+    "@secretlint/secretlint-rule-basicauth": "^8.0.0",
+    "@secretlint/secretlint-rule-slack": "^8.0.0",
+    "secretlint": "^8.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint-plugin-security": "^3.0.0",
+    "eslint-plugin-no-unsanitized": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

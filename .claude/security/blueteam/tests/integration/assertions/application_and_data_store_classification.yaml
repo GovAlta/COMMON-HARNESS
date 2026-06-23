@@ -1,0 +1,171 @@
+skill_version: "unknown"
+last_validated: "2026-03-07"
+fixture: basic_webapp
+description: "Application & Data Store Security Classification skill — produces security-classification.yaml, security-classification-details.yaml, security-classification.md, and security-classification.html"
+
+assertions:
+  # ----- Output artifacts -----
+
+  - id: CLS-OUT-01
+    category: STABLE
+    description: "security-classification.yaml created"
+    type: file_exists
+    path: ".ai/blueteam/data/security-classification.yaml"
+
+  - id: CLS-OUT-02
+    category: STABLE
+    description: "security-classification-details.yaml created"
+    type: file_exists
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+
+  - id: CLS-OUT-03
+    category: STABLE
+    description: "security-classification.md report created (Phase 4 output)"
+    type: file_exists
+    path: ".ai/blueteam/reports/security-classification.md"
+
+  - id: CLS-OUT-04
+    category: STABLE
+    description: "security-classification.html report created (Phase 4 output)"
+    type: file_exists
+    path: ".ai/blueteam/reports/security-classification.html"
+
+  # ----- Schema conformance -----
+  # Detects the inline-write bypass pattern: threat model agents write security-classification.yaml
+  # directly using 'classification:' key instead of the canonical 'application:' key.
+
+  - id: CLS-STR-01
+    category: STRUCTURAL
+    description: "security-classification.yaml has canonical 'application:' top-level key (not bypass 'classification:' key)"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification.yaml"
+    patterns: ["application:"]
+    case_insensitive: false
+
+  - id: CLS-STR-02
+    category: STRUCTURAL
+    description: "security-classification.yaml has 'details_file:' cross-reference to details YAML"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification.yaml"
+    patterns: ["details_file:"]
+    case_insensitive: false
+
+  - id: CLS-STR-03
+    category: STRUCTURAL
+    description: "security-classification.yaml has 'high_sensitivity_indicators:' section"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification.yaml"
+    patterns: ["high_sensitivity_indicators:"]
+    case_insensitive: false
+
+  - id: CLS-STR-04
+    category: STRUCTURAL
+    description: "security-classification-details.yaml has 'data_stores:' array"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+    patterns: ["data_stores:"]
+    case_insensitive: false
+
+  - id: CLS-STR-05
+    category: STRUCTURAL
+    description: "security-classification-details.yaml has 'data_elements:' array"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+    patterns: ["data_elements:"]
+    case_insensitive: false
+
+  - id: CLS-STR-06
+    category: STRUCTURAL
+    description: "security-classification.md has Classification Rationale section"
+    type: section_present
+    path: ".ai/blueteam/reports/security-classification.md"
+    pattern: "Classification Rationale"
+
+  - id: CLS-STR-07
+    category: STRUCTURAL
+    description: "security-classification.md has Data Store section"
+    type: section_present
+    path: ".ai/blueteam/reports/security-classification.md"
+    pattern: "Data Store"
+
+  - id: CLS-STR-08
+    category: STRUCTURAL
+    description: "security-classification.md has High Sensitivity Indicators section"
+    type: section_present
+    path: ".ai/blueteam/reports/security-classification.md"
+    pattern: "Sensitivity"
+
+  - id: CLS-STR-09
+    category: STRUCTURAL
+    description: "security-classification.md has Security Controls section"
+    type: section_present
+    path: ".ai/blueteam/reports/security-classification.md"
+    pattern: "Security Controls"
+
+  # ----- Behavioral -----
+
+  - id: CLS-BEH-01
+    category: BEHAVIORAL
+    description: "Application classification present in summary YAML"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification.yaml"
+    patterns: ["Protected"]
+    case_insensitive: false
+
+  - id: CLS-BEH-02
+    category: BEHAVIORAL
+    description: "At least one data store documented in details YAML"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+    patterns: ["- name:"]
+    case_insensitive: false
+
+  - id: CLS-BEH-03
+    category: BEHAVIORAL
+    description: "missing_controls documented for at least one data store"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+    patterns: ["missing_controls:"]
+    case_insensitive: false
+
+  # ----- Behavioral: failure-mode guards -----
+  # The following assertions guard against two systemic failure modes identified during
+  # a real-world assessment (2026-03-06):
+  #
+  #   FM-1  Impact-based Protected C elevation: the skill reasons about worst-case
+  #         breach consequences and uses "err on caution" to elevate data elements to
+  #         Protected C when the actual data type does not meet the Protected C criteria
+  #         (Cabinet docs, undercover operatives, loss of life/limb).
+  #
+  #   FM-2  Column-level encryption generalisation: the skill sees Protected B data and
+  #         generates unsolicited column-level encryption recommendations for all Protected B
+  #         fields, when the recommendation is only warranted for the five Highly Sensitive
+  #         Data Elements (PHN, SIN, medical/mental health diagnosis, bank account, credit card).
+  #
+  # The basic_webapp fixture (Employee Directory) contains only Protected A data
+  # (employee names, emails, phone numbers, salaries, employee IDs).  None of its data
+  # elements meet Protected C criteria, and none are on the Highly Sensitive list.
+  # Both assertions should therefore pass cleanly against a correct skill output.
+
+  - id: CLS-BEH-04
+    category: BEHAVIORAL
+    description: >
+      [FM-1] Protected C must NOT appear in classification output for basic_webapp.
+      basic_webapp has no Cabinet documents, undercover operatives, or loss-of-life data.
+      A 'Protected C' result indicates impact-based over-elevation rather than criteria matching.
+    type: text_absent
+    path: ".ai/blueteam/data/security-classification.yaml"
+    patterns: ["Protected C"]
+    case_insensitive: false
+
+  - id: CLS-BEH-05
+    category: BEHAVIORAL
+    description: >
+      [FM-2] Column-level encryption must NOT be recommended for basic_webapp data elements.
+      basic_webapp has no Highly Sensitive Data Elements (PHN, SIN, medical diagnosis, bank
+      account, credit card).  A column encryption recommendation indicates the skill is
+      generalising from Protected B classification rather than matching the Highly Sensitive list.
+    type: text_absent
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+    patterns: ["column-level encryption", "column encryption", "Always Encrypted"]
+    case_insensitive: true

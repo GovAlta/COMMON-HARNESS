@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "security_requirements.schema.json",
+  "title": "security_requirements.json",
+  "description": "Schema for .ai/blueteam/data/security_requirements.json — normative security requirements derived from assessment findings",
+  "type": "object",
+  "required": ["schema_version", "last_updated", "generated_by_assessments", "requirements"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version string, e.g. \"1.0\""
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "ISO 8601 date of last write (YYYY-MM-DD)"
+    },
+    "generated_by_assessments": {
+      "type": "array",
+      "description": "List of assessment report names (without .md extension) that contributed entries",
+      "items": { "type": "string" }
+    },
+    "requirements": {
+      "type": "array",
+      "description": "Normative security requirements derived from findings across all assessments",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "priority",
+          "requirement_text",
+          "rationale",
+          "acceptance_criteria",
+          "sources",
+          "related_code_change_ids"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SR-\\d+$",
+            "description": "Sequential identifier: SR-001, SR-002, etc. Never reused or renumbered."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Noun phrase summarising the control, max 80 chars"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Priority derived from the highest severity source finding"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional human-readable summary (used by overview SPA)"
+          },
+          "requirement_text": {
+            "type": "string",
+            "description": "Full normative requirement using RFC 2119 keywords (MUST, SHOULD, MAY)"
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Why this requirement exists; cross-references organizational standards or ASVS"
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "description": "Exactly 3 testable/observable criteria verifying compliance",
+            "minItems": 1,
+            "maxItems": 3,
+            "items": { "type": "string" }
+          },
+          "sources": {
+            "type": "array",
+            "description": "References to source findings in assessment reports",
+            "items": {
+              "type": "object",
+              "required": ["assessment", "finding_id"],
+              "additionalProperties": true,
+              "properties": {
+                "assessment": { "type": "string" },
+                "finding_id": { "type": "string" }
+              }
+            }
+          },
+          "related_code_change_ids": {
+            "type": "array",
+            "description": "CC-NNN IDs from code_changes.json that this requirement covers; populated during merge",
+            "items": {
+              "type": "string",
+              "pattern": "^CC-\\d+$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

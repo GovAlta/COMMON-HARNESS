@@ -1,0 +1,211 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "kill_chains.schema.json",
+  "title": "kill_chains.json",
+  "description": "Schema for .ai/blueteam/data/kill_chains.json — machine-readable kill chain records spanning single and cross-domain assessments",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "last_updated",
+    "application_name",
+    "generated_by",
+    "source_assessments_present",
+    "chains"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version string, e.g. \"1.0\""
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "ISO 8601 date of last write (YYYY-MM-DD)"
+    },
+    "application_name": {
+      "type": "string",
+      "description": "Application name from classification files"
+    },
+    "generated_by": {
+      "type": "string",
+      "const": "kill_chain_aggregator",
+      "description": "Always 'kill_chain_aggregator'"
+    },
+    "source_assessments_present": {
+      "type": "array",
+      "description": "Which of the three assessment reports were available as inputs",
+      "items": { "type": "string" }
+    },
+    "chains": {
+      "type": "array",
+      "description": "Kill chain records; each record documents a compound attack path",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "attack_path",
+          "chain_breaking_fix",
+          "participating_requirement_ids",
+          "participating_code_change_ids",
+          "priority_elevations"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^KC-\\d+$",
+            "description": "Globally unique chain identifier: KC-001, KC-002, etc. Sequential, not preserved across re-runs."
+          },
+          "name": {
+            "type": "string",
+            "description": "Alias for title; descriptive chain name"
+          },
+          "title": {
+            "type": "string",
+            "description": "Descriptive chain name (e.g. 'Unauthenticated PHN Mass Extraction...')"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Combined chain severity; may exceed individual finding severities"
+          },
+          "attacker_type": {
+            "type": "string",
+            "description": "Attacker classification from the Attacker Capability Matrix"
+          },
+          "ai_enabled_variant": {
+            "type": ["string", "null"],
+            "description": "How AI/LLM tools could accelerate this chain; null if not applicable"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["single_assessment", "cross_domain"],
+            "description": "Whether chain spans one or multiple assessment skills"
+          },
+          "source_assessments": {
+            "type": "array",
+            "description": "Which assessment(s) contributed findings to this chain",
+            "items": { "type": "string" }
+          },
+          "attack_path": {
+            "type": "array",
+            "description": "Ordered sequence of attacker actions",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["step"],
+              "additionalProperties": true,
+              "properties": {
+                "step": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Sequential step number (1, 2, 3, ...)"
+                },
+                "attacker_action": {
+                  "type": "string",
+                  "description": "Plain-language description of the attacker action at this step"
+                },
+                "finding": {
+                  "type": "string",
+                  "description": "Finding description (compact form used by some assessment skills)"
+                },
+                "tactic": {
+                  "type": "string",
+                  "description": "ATT&CK tactic name (compact form)"
+                },
+                "finding_refs": {
+                  "type": "array",
+                  "description": "References to findings that enable this step",
+                  "items": {
+                    "type": "object",
+                    "required": ["assessment", "finding_id"],
+                    "additionalProperties": true,
+                    "properties": {
+                      "assessment": { "type": "string" },
+                      "finding_id": { "type": "string" }
+                    }
+                  }
+                },
+                "att_ck_tactic": {
+                  "type": "string",
+                  "description": "ATT&CK tactic ID and name, e.g. 'TA0043 Reconnaissance'"
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": ["critical", "high", "medium", "low"]
+                },
+                "assessment": {
+                  "type": "string",
+                  "description": "Assessment that identified the finding at this step"
+                }
+              }
+            }
+          },
+          "chain_breaking_fix": {
+            "type": "object",
+            "description": "The single remediation that most effectively disrupts this chain",
+            "additionalProperties": true,
+            "properties": {
+              "description": {
+                "type": "string",
+                "description": "Single remediation most effectively disrupting the chain"
+              },
+              "fix": {
+                "type": "string",
+                "description": "Alias for description (compact form)"
+              },
+              "related_requirement_ids": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^SR-\\d+$" }
+              },
+              "related_code_change_ids": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^CC-\\d+$" }
+              },
+              "code_change_id": {
+                "type": "string",
+                "pattern": "^CC-\\d+$",
+                "description": "Alias for the primary code change (compact form)"
+              }
+            }
+          },
+          "participating_requirement_ids": {
+            "type": "array",
+            "description": "All SR-NNN IDs whose findings participate in this chain",
+            "items": { "type": "string", "pattern": "^SR-\\d+$" }
+          },
+          "participating_code_change_ids": {
+            "type": "array",
+            "description": "All CC-NNN IDs whose findings participate in this chain",
+            "items": { "type": "string", "pattern": "^CC-\\d+$" }
+          },
+          "priority_elevations": {
+            "type": "array",
+            "description": "Records of SR-NNN or CC-NNN entries whose priority was elevated by this chain",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "artifact_type": {
+                  "type": "string",
+                  "enum": ["requirement", "code_change"]
+                },
+                "artifact_id": { "type": "string" },
+                "previous_priority": {
+                  "type": "string",
+                  "enum": ["critical", "high", "medium", "low"]
+                },
+                "elevated_to": {
+                  "type": "string",
+                  "enum": ["critical", "high", "medium", "low"]
+                },
+                "rationale": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

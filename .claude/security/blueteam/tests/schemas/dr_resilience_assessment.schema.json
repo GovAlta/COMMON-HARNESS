@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dr_resilience_assessment.schema.json",
+  "title": "dr_resilience_assessment.json",
+  "description": "Schema for .ai/blueteam/data/dr_resilience_assessment.json produced by DR_resilience_analysis_skill. Fields marked as required are consumed by generate_overview_html.py to render the Resiliency & DR tab.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "last_updated",
+    "assessment_name",
+    "application_name",
+    "overall_score",
+    "overall_rating",
+    "overall_risk",
+    "dimensions",
+    "rto_rpo",
+    "gaps",
+    "recommendations"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version string, e.g. \"1.0\""
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "ISO 8601 date of last write (YYYY-MM-DD)"
+    },
+    "assessment_name": {
+      "type": "string",
+      "const": "dr_resilience_analysis",
+      "description": "Must be exactly 'dr_resilience_analysis'"
+    },
+    "application_name": {
+      "type": "string"
+    },
+    "overall_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Numeric resilience score 0-100. Drives score banding in the overview DR tab."
+    },
+    "overall_rating": {
+      "type": "string",
+      "enum": ["excellent", "good", "moderate", "poor", "critical"]
+    },
+    "overall_risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "dimensions": {
+      "type": "array",
+      "description": "Scored dimensions rendered as bar chart in overview DR tab Dimension Scores section.",
+      "items": {
+        "type": "object",
+        "required": ["key", "label", "score", "max_score"],
+        "additionalProperties": true,
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "application_resilience",
+              "backup",
+              "recovery",
+              "infrastructure",
+              "documentation"
+            ]
+          },
+          "label": { "type": "string" },
+          "score": { "type": "number", "minimum": 0 },
+          "max_score": { "type": "number", "minimum": 1 },
+          "summary": { "type": "string" },
+          "evidence": { "type": "array" }
+        }
+      }
+    },
+    "rto_rpo": {
+      "type": "object",
+      "properties": {
+        "rto_defined": { "type": "boolean" },
+        "rpo_defined": { "type": "boolean" },
+        "rto_values": { "type": "array", "items": { "type": "string" } },
+        "rpo_values": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string" }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "description": "Resilience gaps rendered in overview DR tab Potential Gaps table. IDs must follow DRG-NNN format.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "severity"],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^DRG-\\d+",
+            "description": "Gap identifier, e.g. DRG-001"
+          },
+          "title": { "type": "string" },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "application_resilience",
+              "backup",
+              "recovery",
+              "infrastructure",
+              "documentation",
+              "rto_rpo"
+            ]
+          },
+          "current_state": { "type": "string" },
+          "impact": { "type": "string" },
+          "related_code_change": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "description": "Recommendations rendered in overview DR tab. Priority must use p-scale format (p0=critical … p4=informational).",
+      "items": {
+        "type": "object",
+        "required": ["id", "priority", "title"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "priority": {
+            "type": "string",
+            "pattern": "^p[0-4]$",
+            "description": "p0=critical, p1=high, p2=medium, p3=low, p4=informational"
+          },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "related_gap": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

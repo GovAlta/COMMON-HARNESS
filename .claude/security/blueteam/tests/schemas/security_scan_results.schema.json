@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "security_scan_results.schema.json",
+  "title": "security-scan-results.json",
+  "description": "Schema for .ai/blueteam/data/security-scan-results.json produced by cybersecurity_tool_use_skill.",
+  "type": "object",
+  "required": ["findings"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {"type": "string"},
+    "last_updated": {"type": "string"},
+    "scan_metadata": {
+      "type": "object",
+      "properties": {
+        "scan_timestamp": {"type": "string"},
+        "target_directory": {"type": "string"},
+        "tools_executed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status"],
+            "properties": {
+              "name": {"type": "string"},
+              "version": {"type": "string"},
+              "status": {"type": "string", "enum": ["success", "failed", "not_installed"]},
+              "execution_time_seconds": {"type": "number"},
+              "error_message": {"type": ["string", "null"]},
+              "flags_used": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "severity", "title"],
+        "properties": {
+          "id": {"type": "string"},
+          "type": {"type": "string", "enum": ["vulnerability", "secret", "misconfiguration", "sast"]},
+          "severity": {"type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "affected_component": {"type": "string"},
+          "affected_version": {"type": ["string", "null"]},
+          "location": {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string"},
+              "line": {"type": ["integer", "null"]}
+            }
+          },
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "cvss_score": {"type": ["number", "null"]},
+          "references": {"type": "array", "items": {"type": "string"}},
+          "remediation": {"type": "string"}
+        }
+      }
+    }
+  }
+}

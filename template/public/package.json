@@ -1,0 +1,26 @@
+{
+  "name": "app-template-monorepo",
+  "version": "1.0.0",
+  "description": "Full-stack Vue 3 + Express + Postgres template",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev:all": "concurrently -n server,client -c blue,green \"cd server && npm run dev\" \"cd client && npm run dev\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build && cd ../server && npm run build",
+    "start": "cd server && npm run start",
+    "serve": "cd server && npm run start",
+    "test": "cd server && npm test && cd ../client && npm test",
+    "test:server": "cd server && npm test",
+    "test:client": "cd client && npm test",
+    "db:migrate": "cd server && npm run db:migrate",
+    "db:rollback": "cd server && npm run db:rollback",
+    "db:seed": "cd server && npm run db:seed",
+    "set-role": "cd server && npm run set-role --",
+    "generate-keys": "cd server && npm run generate-keys --"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

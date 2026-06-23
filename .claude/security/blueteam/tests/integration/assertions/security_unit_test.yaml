@@ -1,0 +1,177 @@
+skill_version: "1.0.0"
+last_validated: "2026-03-07"
+fixture: basic_webapp
+description: "Security Unit Test Coverage router — test generation, baseline counting, and coverage report"
+
+assertions:
+
+  # ---------------------------------------------------------------------------
+  # STABLE — output artifact invariants
+  # ---------------------------------------------------------------------------
+
+  - id: SCUT-OUT-01
+    category: STABLE
+    description: "Coverage report markdown created"
+    type: file_exists
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+
+  - id: SCUT-OUT-02
+    category: STABLE
+    description: "Coverage report HTML created"
+    type: file_exists
+    path: ".ai/blueteam/reports/security_unit_test_coverage.html"
+
+  # ---------------------------------------------------------------------------
+  # STRUCTURAL — required report sections
+  # ---------------------------------------------------------------------------
+
+  - id: SCUT-STR-01
+    category: STRUCTURAL
+    description: "Executive Summary section present"
+    type: section_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    pattern: "Executive Summary"
+
+  - id: SCUT-STR-02
+    category: STRUCTURAL
+    description: "Environment Discovery section present"
+    type: section_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    pattern: "Environment Discovery"
+
+  - id: SCUT-STR-03
+    category: STRUCTURAL
+    description: "Existing Test Coverage section present"
+    type: section_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    pattern: "Existing Test Coverage"
+
+  - id: SCUT-STR-04
+    category: STRUCTURAL
+    description: "New Security Tests Written section present"
+    type: section_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    pattern: "New Security Tests"
+
+  - id: SCUT-STR-05
+    category: STRUCTURAL
+    description: "Omit markers scan result documented"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["security-test-omit"]
+    case_insensitive: true
+
+  # ---------------------------------------------------------------------------
+  # STRUCTURAL — Coverage Dashboard section (new section)
+  # ---------------------------------------------------------------------------
+
+  - id: SCUT-STR-06
+    category: STRUCTURAL
+    description: "Security Control Coverage (dashboard) section present"
+    type: section_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    pattern: "Security Control Coverage"
+
+  - id: SCUT-STR-07
+    category: STRUCTURAL
+    description: "Coverage Gain row (pp metric) present in dashboard"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["Coverage Gain", " pp "]
+    case_insensitive: false
+
+  - id: SCUT-STR-08
+    category: STRUCTURAL
+    description: "Denominator note about infra-excluded findings present"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["infrastructure-only", "excluded from this metric"]
+    case_insensitive: true
+
+  - id: SCUT-STR-09
+    category: STRUCTURAL
+    description: "Per-stack table present in Coverage Dashboard"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["Per Stack", "With Generated Tests"]
+    case_insensitive: false
+
+  # ---------------------------------------------------------------------------
+  # BEHAVIORAL — pre-existing baseline count (new feature)
+  # ---------------------------------------------------------------------------
+
+  - id: SCUT-BEH-01
+    category: BEHAVIORAL
+    description: "Per-stack pre-existing security test count recorded in Environment Discovery"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["pre_existing_security_tests"]
+    case_insensitive: false
+
+  - id: SCUT-BEH-02
+    category: BEHAVIORAL
+    description: "Pre-existing security test total recorded in Executive Summary table"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["pre_existing_security_tests_total"]
+    case_insensitive: false
+
+  # ---------------------------------------------------------------------------
+  # BEHAVIORAL — test generation and run results
+  # ---------------------------------------------------------------------------
+
+  - id: SCUT-BEH-03
+    category: BEHAVIORAL
+    description: "At least one security test file is mentioned"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["SecurityTest", "security_test", "security-test"]
+    case_insensitive: true
+
+  - id: SCUT-BEH-04
+    category: BEHAVIORAL
+    description: "Test run result recorded (PASS, FAIL, or NOT RUN)"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["PASS", "FAIL", "NOT RUN"]
+    case_insensitive: false
+
+  - id: SCUT-BEH-05
+    category: BEHAVIORAL
+    description: "Authentication / authorization test generated for fixture's unprotected routes"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["401", "authentication", "authorization"]
+    case_insensitive: true
+
+  - id: SCUT-BEH-06
+    category: BEHAVIORAL
+    description: "Hardcoded secret or injection test generated for fixture's known vulnerabilities"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.md"
+    patterns: ["injection", "hardcoded", "secret", "SQL"]
+    case_insensitive: true
+
+  # ---------------------------------------------------------------------------
+  # STRUCTURAL — HTML Coverage Dashboard rendering
+  # ---------------------------------------------------------------------------
+
+  - id: SCUT-STR-10
+    category: STRUCTURAL
+    description: "HTML Coverage Dashboard rendered as 2-card flex layout"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.html"
+    patterns: ["display:flex", "font-size:40px"]
+    case_insensitive: false
+
+  # ---------------------------------------------------------------------------
+  # BEHAVIORAL — HTML Coverage Dashboard labels
+  # ---------------------------------------------------------------------------
+
+  - id: SCUT-BEH-07
+    category: BEHAVIORAL
+    description: "HTML Coverage Dashboard shows pre-existing and projected coverage labels"
+    type: text_present
+    path: ".ai/blueteam/reports/security_unit_test_coverage.html"
+    patterns: ["Pre-Existing Coverage", "With Generated Tests Adopted"]
+    case_insensitive: false

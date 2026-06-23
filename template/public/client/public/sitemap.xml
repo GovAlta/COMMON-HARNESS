@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Static base sitemap covering the public routes. Replace the host with
+  your production origin at deploy time, or generate this file dynamically
+  on the server with one entry per published blog post + resource.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url><loc>/explore</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>/dashboards</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>/resources</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>/services</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>/locations</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>/blog</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>/about</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>/install</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>/contact</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>/docs/api</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+</urlset>

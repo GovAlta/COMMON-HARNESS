@@ -1,0 +1,3664 @@
+openapi: 3.1.0
+info:
+  title: Application Template API
+  version: 1.0.0
+  description: >
+    RESTful API for the application template. Provides access
+    to resources, service catalogues, service locations, forms,
+    submissions, notifications, subscriptions, AI assistant, and admin
+    management capabilities.
+
+servers:
+  - url: /api/v1
+    description: Default API base path
+
+tags:
+  - name: Health
+    description: Health check and readiness probes
+  - name: Auth
+    description: Authentication via SSO, session management, CSRF tokens
+  - name: Resources
+    description: Public resources (guides, announcements, policies)
+  - name: Services
+    description: Public service catalogue
+  - name: Service Locations
+    description: Public service location directory
+  - name: Forms
+    description: Form definitions and form submission
+  - name: Submissions
+    description: User submission management (view, update drafts, submit, retract)
+  - name: Files
+    description: File upload
+  - name: Notifications
+    description: User notifications and real-time streaming
+  - name: Subscriptions
+    description: Notification subscription management
+  - name: AI
+    description: AI assistant chat and image analysis
+  - name: Admin
+    description: Administrative endpoints (requires admin role)
+  - name: Landing
+    description: Aggregated landing page data
+  - name: Contact
+    description: Public contact inquiry submission
+  - name: Blog
+    description: Public blog posts
+
+security:
+  - cookieAuth: []
+    csrfToken: []
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: JWT access token stored in an HTTP-only cookie
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: CSRF protection token obtained from GET /auth/csrf-token
+
+  schemas:
+    # ─── Standard Responses ─────────────────────────────────────
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          description: Response payload (shape varies by endpoint)
+        message:
+          type: string
+      required:
+        - success
+
+    PaginatedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items: {}
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required:
+            - page
+            - limit
+            - total
+            - totalPages
+      required:
+        - success
+        - data
+        - pagination
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              message:
+                type: string
+      required:
+        - success
+        - error
+
+    # ─── Auth ───────────────────────────────────────────────────
+    CsrfTokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+        provider:
+          type: string
+
+    # ─── Resources ──────────────────────────────────────────────
+    ListResourcesQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        sort:
+          type: string
+          enum:
+            - resource_title
+            - resource_status
+            - resource_category
+            - resource_region
+            - resource_published_at
+            - updated_at
+            - created_at
+          default: updated_at
+        order:
+          type: string
+          enum: [asc, desc]
+          default: desc
+        status:
+          type: string
+          description: "Comma-separated statuses, e.g. published,draft"
+        category:
+          type: string
+          description: "Comma-separated categories, e.g. guide,announcement"
+        region:
+          type: string
+        search:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+
+    ResourceUpdatesQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+
+    # ─── Services ───────────────────────────────────────────────
+    ListServicesQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        category:
+          type: string
+        search:
+          type: string
+
+    # ─── Service Locations ──────────────────────────────────────
+    ListServiceLocationsQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        sort:
+          type: string
+          enum:
+            - location_name
+            - location_city
+            - location_region
+            - location_status
+            - updated_at
+            - created_at
+          default: location_name
+        order:
+          type: string
+          enum: [asc, desc]
+          default: asc
+        status:
+          type: string
+          enum: [open, closed, limited]
+        region:
+          type: string
+        category:
+          type: string
+          format: uuid
+        search:
+          type: string
+
+    # ─── Notifications ──────────────────────────────────────────
+    NotificationQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        filter:
+          type: string
+          enum: [all, unread, read]
+          default: all
+
+    BroadcastBody:
+      type: object
+      required:
+        - title
+        - body
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        type:
+          type: string
+          enum: [service_update, announcement, emergency_broadcast, general]
+          default: general
+        regionFilter:
+          type: string
+          maxLength: 100
+          nullable: true
+        resourceId:
+          type: string
+          format: uuid
+          nullable: true
+
+    # ─── Subscriptions ──────────────────────────────────────────
+    CreateSubscriptionBody:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [resource, region, broadcast]
+        targetId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required when type is 'resource'
+        regionName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          nullable: true
+          description: Required when type is 'region'
+        filterCriteria:
+          type: object
+          additionalProperties: true
+          default: {}
+
+    # ─── AI ─────────────────────────────────────────────────────
+    ChatMessageBody:
+      type: object
+      required:
+        - content
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        content:
+          type: string
+          minLength: 1
+          maxLength: 4000
+
+    # ─── Submissions Query ──────────────────────────────────────
+    SubmissionQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+
+    # ─── Admin Schemas ──────────────────────────────────────────
+    AdminCreateResourceBody:
+      type: object
+      required:
+        - resource_title
+        - resource_category
+      properties:
+        resource_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        resource_status:
+          type: string
+          enum: [published, draft, archived]
+          default: draft
+        resource_category:
+          type: string
+          enum: [guide, announcement, policy, reference, bulletin]
+        resource_summary:
+          type: string
+          maxLength: 500
+        resource_content:
+          type: string
+          maxLength: 50000
+        resource_author:
+          type: string
+          maxLength: 255
+        resource_region:
+          type: string
+          maxLength: 100
+        resource_published_at:
+          type: string
+        resource_tags:
+          type: array
+          items:
+            type: string
+
+    AdminUpdateResourceBody:
+      type: object
+      properties:
+        resource_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        resource_status:
+          type: string
+          enum: [published, draft, archived]
+        resource_category:
+          type: string
+          enum: [guide, announcement, policy, reference, bulletin]
+        resource_summary:
+          type: string
+          maxLength: 500
+        resource_content:
+          type: string
+          maxLength: 50000
+        resource_author:
+          type: string
+          maxLength: 255
+        resource_region:
+          type: string
+          maxLength: 100
+        resource_published_at:
+          type: string
+        resource_tags:
+          type: array
+          items:
+            type: string
+
+    AdminCreateResourceUpdateBody:
+      type: object
+      required:
+        - update_title
+        - update_type
+      properties:
+        update_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        update_description:
+          type: string
+          maxLength: 5000
+        update_type:
+          type: string
+          enum: [revision, correction, supplement, status_change]
+
+    AdminCreateServiceLocationBody:
+      type: object
+      required:
+        - location_name
+      properties:
+        location_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        location_address:
+          type: string
+          maxLength: 500
+        location_city:
+          type: string
+          maxLength: 100
+        location_region:
+          type: string
+          maxLength: 100
+        location_latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        location_longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        location_phone:
+          type: string
+          maxLength: 50
+        location_email:
+          type: string
+          format: email
+          maxLength: 255
+        location_hours:
+          type: string
+          maxLength: 500
+        location_services_offered:
+          type: string
+          maxLength: 5000
+        location_accessibility_info:
+          type: string
+          maxLength: 500
+        location_status:
+          type: string
+          enum: [open, closed, limited]
+          default: open
+        fk_service_location_service_category:
+          type: string
+          format: uuid
+
+    AdminUpdateServiceLocationBody:
+      type: object
+      properties:
+        location_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        location_address:
+          type: string
+          maxLength: 500
+        location_city:
+          type: string
+          maxLength: 100
+        location_region:
+          type: string
+          maxLength: 100
+        location_latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        location_longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        location_phone:
+          type: string
+          maxLength: 50
+        location_email:
+          type: string
+          format: email
+          maxLength: 255
+        location_hours:
+          type: string
+          maxLength: 500
+        location_services_offered:
+          type: string
+          maxLength: 5000
+        location_accessibility_info:
+          type: string
+          maxLength: 500
+        location_status:
+          type: string
+          enum: [open, closed, limited]
+        fk_service_location_service_category:
+          type: string
+          format: uuid
+
+    AdminCreateFormBody:
+      type: object
+      required:
+        - form_name
+        - form_schema
+      properties:
+        form_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        form_description:
+          type: string
+          maxLength: 2000
+        form_schema:
+          type: object
+          required:
+            - title
+            - fields
+          properties:
+            title:
+              type: string
+            fields:
+              type: array
+              items:
+                type: object
+                required:
+                  - name
+                  - type
+                  - label
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  label:
+                    type: string
+                additionalProperties: true
+          additionalProperties: true
+        is_published:
+          type: boolean
+
+    AdminUpdateFormBody:
+      type: object
+      properties:
+        form_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        form_description:
+          type: string
+          maxLength: 2000
+        form_schema:
+          type: object
+          required:
+            - title
+            - fields
+          properties:
+            title:
+              type: string
+            fields:
+              type: array
+              items:
+                type: object
+                required:
+                  - name
+                  - type
+                  - label
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  label:
+                    type: string
+                additionalProperties: true
+          additionalProperties: true
+        is_published:
+          type: boolean
+        form_version_number:
+          type: integer
+          minimum: 1
+
+    AdminCreateServiceCatalogueBody:
+      type: object
+      required:
+        - service_title
+        - service_description_brief
+        - service_description_full
+        - fk_service_catalogue_service_category
+      properties:
+        service_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        service_description_brief:
+          type: string
+          minLength: 1
+          maxLength: 255
+        service_description_full:
+          type: string
+          minLength: 1
+        fk_service_catalogue_service_category:
+          type: string
+          format: uuid
+        service_eligibility:
+          type: string
+          nullable: true
+        service_how_to_apply:
+          type: string
+          nullable: true
+        service_required_documents:
+          type: string
+          nullable: true
+        service_contact_phone:
+          type: string
+          maxLength: 20
+          nullable: true
+        service_contact_email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+        is_published:
+          type: boolean
+          default: true
+
+    AdminUpdateServiceCatalogueBody:
+      type: object
+      properties:
+        service_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        service_description_brief:
+          type: string
+          minLength: 1
+          maxLength: 255
+        service_description_full:
+          type: string
+          minLength: 1
+        fk_service_catalogue_service_category:
+          type: string
+          format: uuid
+        service_eligibility:
+          type: string
+          nullable: true
+        service_how_to_apply:
+          type: string
+          nullable: true
+        service_required_documents:
+          type: string
+          nullable: true
+        service_contact_phone:
+          type: string
+          maxLength: 20
+          nullable: true
+        service_contact_email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+        is_published:
+          type: boolean
+
+    AdminSubmissionsQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        formId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [submitted, in-review, approved, rejected, completed]
+        startDate:
+          type: string
+        endDate:
+          type: string
+
+    AdminUpdateSubmissionStatusBody:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [submitted, in-review, approved, rejected, completed]
+
+    AdminBroadcastNotificationBody:
+      type: object
+      required:
+        - title
+        - body
+        - type
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        type:
+          type: string
+          enum: [service_update, announcement, emergency_broadcast, general]
+        regionFilter:
+          type: string
+          maxLength: 200
+          nullable: true
+
+    DashboardStatsQuery:
+      type: object
+      properties:
+        days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+
+    # ─── Contact ────────────────────────────────────────────────
+    ContactInquirySubmission:
+      type: object
+      required:
+        - pk_contact_inquiry
+        - created_at
+      properties:
+        pk_contact_inquiry:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    SubmitContactBody:
+      type: object
+      required:
+        - name
+        - email
+        - message
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        subject:
+          type: string
+          maxLength: 300
+        message:
+          type: string
+          minLength: 1
+          maxLength: 5000
+
+    # ─── Blog ───────────────────────────────────────────────────
+    BlogPost:
+      type: object
+      required:
+        - pk_blog_post
+        - post_slug
+        - post_title
+        - post_body
+        - post_tags
+        - is_published
+        - created_at
+        - updated_at
+      properties:
+        pk_blog_post:
+          type: string
+          format: uuid
+        post_slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          maxLength: 200
+        post_title:
+          type: string
+          maxLength: 300
+        post_excerpt:
+          type: string
+          maxLength: 800
+          nullable: true
+        post_body:
+          type: string
+        post_hero_image_url:
+          type: string
+          format: uri
+          maxLength: 2048
+          nullable: true
+        post_author_name:
+          type: string
+          maxLength: 255
+          nullable: true
+        post_tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+          maxItems: 20
+        is_published:
+          type: boolean
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateBlogPostInput:
+      type: object
+      required:
+        - slug
+        - title
+        - body
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          minLength: 1
+          maxLength: 200
+          description: Lowercase a-z, 0-9, dashes only. No leading/trailing/double dashes.
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        excerpt:
+          type: string
+          maxLength: 800
+          nullable: true
+        body:
+          type: string
+          minLength: 1
+        heroImageUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+          nullable: true
+        authorName:
+          type: string
+          maxLength: 255
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+          maxItems: 20
+        isPublished:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateBlogPostInput:
+      type: object
+      description: Partial update — all fields optional. At least one field is required by the controller.
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          minLength: 1
+          maxLength: 200
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        excerpt:
+          type: string
+          maxLength: 800
+          nullable: true
+        body:
+          type: string
+          minLength: 1
+        heroImageUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+          nullable: true
+        authorName:
+          type: string
+          maxLength: 255
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+          maxItems: 20
+        isPublished:
+          type: boolean
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ─── Files ──────────────────────────────────────────────────
+    FileAttachment:
+      type: object
+      description: File metadata exposed by GET /files (no file bytes).
+      required:
+        - pk_file_attachment
+        - file_original_name
+        - file_mime_type
+        - file_size_bytes
+        - created_at
+      properties:
+        pk_file_attachment:
+          type: string
+          format: uuid
+        file_original_name:
+          type: string
+        file_mime_type:
+          type: string
+        file_size_bytes:
+          type: integer
+          minimum: 0
+        fk_file_attachment_form_submission:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── Admin Users ────────────────────────────────────────────
+    AdminUser:
+      type: object
+      description: User row as exposed to administrators. Excludes password/secret columns; user_account has no password column (SSO only).
+      required:
+        - pk_user_account
+        - user_email_address
+        - user_display_name
+        - sso_provider_name
+        - user_role_name
+        - is_active
+        - created_at
+        - updated_at
+      properties:
+        pk_user_account:
+          type: string
+          format: uuid
+        user_email_address:
+          type: string
+          format: email
+        user_display_name:
+          type: string
+        sso_provider_name:
+          type: string
+        sso_provider_id:
+          type: string
+        google_id:
+          type: string
+          nullable: true
+        microsoft_id:
+          type: string
+          nullable: true
+        user_role_name:
+          type: string
+          enum: [viewer, submitter, editor, manager, admin, super_admin]
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        is_active:
+          type: boolean
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpdateUserRoleInput:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          enum: [viewer, submitter, editor, manager, admin, super_admin]
+
+    UpdateUserStatusInput:
+      type: object
+      required:
+        - isActive
+      properties:
+        isActive:
+          type: boolean
+
+    # ─── Submissions (detail triple) ────────────────────────────
+    FormSubmission:
+      type: object
+      description: Form submission row joined with form_name. Matches FormSubmissionWithForm.
+      required:
+        - pk_form_submission
+        - fk_form_submission_form_definition
+        - fk_form_submission_user_account
+        - submission_data
+        - submission_status
+        - submission_reference_number
+        - form_name
+        - created_at
+        - updated_at
+      properties:
+        pk_form_submission:
+          type: string
+          format: uuid
+        fk_form_submission_form_definition:
+          type: string
+          format: uuid
+        fk_form_submission_user_account:
+          type: string
+          format: uuid
+        submission_data:
+          type: object
+          additionalProperties: true
+        submission_status:
+          type: string
+          enum: [draft, submitted, in-review, approved, rejected, completed, retracted]
+        submission_reference_number:
+          type: string
+        form_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FormDefinition:
+      type: object
+      description: Form definition row (the form_schema JSON describes the renderable fields).
+      required:
+        - pk_form_definition
+        - form_name
+        - form_version_number
+        - form_schema
+        - is_published
+        - created_at
+        - updated_at
+      properties:
+        pk_form_definition:
+          type: string
+          format: uuid
+        form_name:
+          type: string
+        form_version_number:
+          type: integer
+          minimum: 1
+        form_schema:
+          type: object
+          description: JSON Schema describing the form's fields (title, fields[], optional steps[]).
+          additionalProperties: true
+        form_description:
+          type: string
+          nullable: true
+        is_published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SubmissionDetail:
+      type: object
+      description: Triple returned by GET /submissions/{id} and GET /admin/submissions/{id} — the submission row, its parent form definition, and the file attachment metadata.
+      required:
+        - submission
+        - form
+        - attachments
+      properties:
+        submission:
+          $ref: "#/components/schemas/FormSubmission"
+        form:
+          $ref: "#/components/schemas/FormDefinition"
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileAttachment"
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+paths:
+  # ═══════════════════════════════════════════════════════════════
+  # Health
+  # ═══════════════════════════════════════════════════════════════
+  /health:
+    get:
+      tags: [Health]
+      summary: Overall health check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /health/liveness:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      operationId: getLiveness
+      security: []
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /health/readiness:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      operationId: getReadiness
+      security: []
+      responses:
+        "200":
+          description: Service is ready to accept traffic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "503":
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Auth
+  # ═══════════════════════════════════════════════════════════════
+  /auth/google:
+    get:
+      tags: [Auth]
+      summary: Initiate Google SSO login
+      operationId: googleLogin
+      security: []
+      responses:
+        "302":
+          description: Redirect to Google OAuth consent screen
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/google/callback:
+    get:
+      tags: [Auth]
+      summary: Google SSO callback
+      operationId: googleCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to application after successful authentication
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/microsoft:
+    get:
+      tags: [Auth]
+      summary: Initiate Microsoft SSO login
+      operationId: microsoftLogin
+      security: []
+      responses:
+        "302":
+          description: Redirect to Microsoft OAuth consent screen
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/microsoft/callback:
+    get:
+      tags: [Auth]
+      summary: Microsoft SSO callback
+      operationId: microsoftCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to application after successful authentication
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/csrf-token:
+    get:
+      tags: [Auth]
+      summary: Get CSRF token
+      operationId: getCsrfToken
+      security: []
+      responses:
+        "200":
+          description: CSRF token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsrfTokenResponse"
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user profile
+      operationId: getMe
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      security: []
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out current user
+      operationId: logout
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Resources
+  # ═══════════════════════════════════════════════════════════════
+  /resources:
+    get:
+      tags: [Resources]
+      summary: List resources with pagination, filtering, and sorting
+      operationId: listResources
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [resource_title, resource_status, resource_category, resource_region, resource_published_at, updated_at, created_at]
+            default: updated_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: status
+          in: query
+          description: "Comma-separated statuses, e.g. published,draft"
+          schema:
+            type: string
+        - name: category
+          in: query
+          description: "Comma-separated categories, e.g. guide,announcement"
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /resources/{id}:
+    get:
+      tags: [Resources]
+      summary: Get resource detail by ID
+      operationId: getResource
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Resource detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /resources/{id}/updates:
+    get:
+      tags: [Resources]
+      summary: Get paginated updates for a resource
+      operationId: getResourceUpdates
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of resource updates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Services
+  # ═══════════════════════════════════════════════════════════════
+  /services:
+    get:
+      tags: [Services]
+      summary: List services with pagination, category filtering, and search
+      operationId: listServices
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of services
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /services/categories:
+    get:
+      tags: [Services]
+      summary: List all service categories
+      operationId: getCategories
+      security: []
+      responses:
+        "200":
+          description: List of service categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /services/{id}:
+    get:
+      tags: [Services]
+      summary: Get service detail by ID
+      operationId: getService
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Service detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Service Locations
+  # ═══════════════════════════════════════════════════════════════
+  /service-locations:
+    get:
+      tags: [Service Locations]
+      summary: List service locations with pagination and filtering
+      operationId: listServiceLocations
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [location_name, location_city, location_region, location_status, updated_at, created_at]
+            default: location_name
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, limited]
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of service locations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /service-locations/{id}:
+    get:
+      tags: [Service Locations]
+      summary: Get service location detail by ID
+      operationId: getServiceLocation
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Service location detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Forms
+  # ═══════════════════════════════════════════════════════════════
+  /forms/published:
+    get:
+      tags: [Forms]
+      summary: List published form definitions (metadata only)
+      operationId: listPublishedForms
+      security: []
+      responses:
+        "200":
+          description: List of published forms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /forms/{id}/schema:
+    get:
+      tags: [Forms]
+      summary: Get full JSON Schema for form rendering
+      operationId: getFormSchema
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Form JSON Schema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /forms/{id}/submissions:
+    post:
+      tags: [Forms]
+      summary: Submit a form
+      operationId: submitForm
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Form data matching the form's JSON Schema
+              additionalProperties: true
+      responses:
+        "201":
+          description: Submission created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /forms/{id}/drafts:
+    post:
+      tags: [Forms]
+      summary: Save form data as a draft
+      operationId: saveDraft
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Partial form data to save as draft
+              additionalProperties: true
+      responses:
+        "201":
+          description: Draft saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Submissions
+  # ═══════════════════════════════════════════════════════════════
+  /submissions:
+    get:
+      tags: [Submissions]
+      summary: List current user's submissions (paginated)
+      operationId: listSubmissions
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of user submissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /submissions/{id}:
+    get:
+      tags: [Submissions]
+      summary: Get submission detail (own submissions only)
+      description: >
+        Returns the {submission, form, attachments} triple — the submission
+        row joined with its form name, the full parent form definition
+        (including form_schema for label rendering), and the file
+        attachment metadata. No file bytes — download via GET /files/{id}.
+      operationId: getSubmission
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Submission detail triple
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SubmissionDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /submissions/{id}/draft:
+    put:
+      tags: [Submissions]
+      summary: Update an existing draft
+      operationId: updateDraft
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Updated draft form data
+              additionalProperties: true
+      responses:
+        "200":
+          description: Draft updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /submissions/{id}/submit:
+    post:
+      tags: [Submissions]
+      summary: Submit a previously saved draft
+      operationId: submitDraft
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Draft submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /submissions/{id}/retract:
+    post:
+      tags: [Submissions]
+      summary: Retract a submitted submission
+      operationId: retractSubmission
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Submission retracted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Files
+  # ═══════════════════════════════════════════════════════════════
+  /files:
+    get:
+      tags: [Files]
+      summary: List the current user's uploaded files (paginated)
+      description: >
+        Returns file metadata only — no file bytes. Download a specific
+        file with GET /files/{id}.
+      operationId: listMyFiles
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of file attachment metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FileAttachment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /files/upload:
+    post:
+      tags: [Files]
+      summary: Upload a file
+      operationId: uploadFile
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "File to upload (max 10 MB)"
+      responses:
+        "201":
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /files/{id}:
+    get:
+      tags: [Files]
+      summary: Download a file
+      description: >
+        Streams the file bytes from the BYTEA store. Uploaders can download
+        their own files; admins (admin or super_admin) can download any.
+        Sets `Content-Type` from the stored MIME type and `Content-Disposition: attachment`
+        with the original filename (RFC 5987 encoded for non-ASCII).
+        Returns 501 when the file lives in an external storage provider
+        (sharepoint/s3/azure-blob) that has no inline-download adapter wired in.
+      operationId: downloadFile
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Binary file stream
+          headers:
+            Content-Disposition:
+              description: 'attachment; filename="..." (with RFC 5987 filename* for non-ASCII names)'
+              schema:
+                type: string
+            Content-Type:
+              description: MIME type of the stored file
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: Always `nosniff` — downloads are never rendered inline.
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Missing or invalid file id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "501":
+          description: File is stored in an external provider with no inline-download adapter wired.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Notifications
+  # ═══════════════════════════════════════════════════════════════
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List current user's notifications with pagination
+      operationId: listNotifications
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: filter
+          in: query
+          schema:
+            type: string
+            enum: [all, unread, read]
+            default: all
+      responses:
+        "200":
+          description: Paginated list of notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /notifications/stream:
+    get:
+      tags: [Notifications]
+      summary: SSE endpoint for real-time notification delivery
+      operationId: streamNotifications
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      operationId: getUnreadCount
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Unread notification count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      operationId: markNotificationAsRead
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /notifications/broadcast:
+    post:
+      tags: [Notifications]
+      summary: Broadcast notification to all subscribers (admin only)
+      description: Requires admin role.
+      operationId: broadcastNotification
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BroadcastBody"
+      responses:
+        "201":
+          description: Broadcast sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Subscriptions
+  # ═══════════════════════════════════════════════════════════════
+  /subscriptions:
+    get:
+      tags: [Subscriptions]
+      summary: List current user's subscriptions
+      operationId: listSubscriptions
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [Subscriptions]
+      summary: Create a new subscription
+      operationId: createSubscription
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubscriptionBody"
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /subscriptions/{id}:
+    delete:
+      tags: [Subscriptions]
+      summary: Delete a subscription
+      operationId: deleteSubscription
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Subscription deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # AI
+  # ═══════════════════════════════════════════════════════════════
+  /ai/chat:
+    post:
+      tags: [AI]
+      summary: Send a chat message to the AI assistant
+      operationId: aiChat
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageBody"
+      responses:
+        "200":
+          description: AI chat response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /ai/analyze-image:
+    post:
+      tags: [AI]
+      summary: Analyze an uploaded image with AI
+      operationId: aiAnalyzeImage
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: "Image file to analyze (max 10 MB)"
+                conversationId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Image analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /ai/conversations:
+    get:
+      tags: [AI]
+      summary: List user's AI conversations
+      operationId: listConversations
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /ai/conversations/{conversationId}:
+    delete:
+      tags: [AI]
+      summary: Delete an AI conversation
+      operationId: deleteConversation
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Conversation deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /ai/conversations/{conversationId}/generate-title:
+    post:
+      tags: [AI]
+      summary: Generate an AI title for a conversation
+      operationId: generateConversationTitle
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Generated title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /ai/conversations/{conversationId}/messages:
+    get:
+      tags: [AI]
+      summary: Get messages for a conversation
+      operationId: getConversationMessages
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of conversation messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Admin
+  # ═══════════════════════════════════════════════════════════════
+  /admin/dashboard/stats:
+    get:
+      tags: [Admin]
+      summary: Get dashboard statistics
+      description: Requires admin role.
+      operationId: adminGetDashboardStats
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/blog:
+    get:
+      tags: [Admin]
+      summary: List all blog posts (admin view — includes drafts)
+      description: Requires admin role.
+      operationId: adminListBlogPosts
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: publishedOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Paginated list of blog posts (including drafts)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BlogPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    post:
+      tags: [Admin]
+      summary: Create a new blog post
+      description: Requires admin role.
+      operationId: adminCreateBlogPost
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlogPostInput"
+      responses:
+        "201":
+          description: Blog post created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/BlogPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/blog/{id}:
+    get:
+      tags: [Admin]
+      summary: Get a single blog post (admin view — includes drafts)
+      description: Requires admin role.
+      operationId: adminGetBlogPost
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Blog post
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/BlogPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    put:
+      tags: [Admin]
+      summary: Update a blog post (partial)
+      description: Requires admin role.
+      operationId: adminUpdateBlogPost
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBlogPostInput"
+      responses:
+        "200":
+          description: Blog post updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/BlogPost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a blog post
+      description: Requires admin role. Sets is_deleted = true and is_published = false.
+      operationId: adminDeleteBlogPost
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Blog post soft-deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/resources:
+    post:
+      tags: [Admin]
+      summary: Create a new resource
+      description: Requires admin role.
+      operationId: adminCreateResource
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateResourceBody"
+      responses:
+        "201":
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/resources/{id}:
+    put:
+      tags: [Admin]
+      summary: Update an existing resource
+      description: Requires admin role.
+      operationId: adminUpdateResource
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateResourceBody"
+      responses:
+        "200":
+          description: Resource updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a resource
+      description: Requires admin role. Sets is_deleted = true; row is filtered from all list/read endpoints.
+      operationId: adminDeleteResource
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Resource soft-deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/resources/{id}/updates:
+    post:
+      tags: [Admin]
+      summary: Add an update to a resource
+      description: Requires admin role.
+      operationId: adminAddResourceUpdate
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateResourceUpdateBody"
+      responses:
+        "201":
+          description: Resource update added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/service-locations:
+    post:
+      tags: [Admin]
+      summary: Create a new service location
+      description: Requires admin role.
+      operationId: adminCreateServiceLocation
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateServiceLocationBody"
+      responses:
+        "201":
+          description: Service location created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/service-locations/{id}:
+    put:
+      tags: [Admin]
+      summary: Update an existing service location
+      description: Requires admin role.
+      operationId: adminUpdateServiceLocation
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateServiceLocationBody"
+      responses:
+        "200":
+          description: Service location updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a service location
+      description: Requires admin role. Sets is_deleted = true; row is filtered from all list/read endpoints.
+      operationId: adminDeleteServiceLocation
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Service location soft-deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/services:
+    get:
+      tags: [Admin]
+      summary: List all services (admin view)
+      description: Requires admin role.
+      operationId: adminListServices
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of all services
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      tags: [Admin]
+      summary: Create a new service catalogue entry
+      description: Requires admin role.
+      operationId: adminCreateService
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateServiceCatalogueBody"
+      responses:
+        "201":
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/services/{id}:
+    put:
+      tags: [Admin]
+      summary: Update a service catalogue entry
+      description: Requires admin role.
+      operationId: adminUpdateService
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateServiceCatalogueBody"
+      responses:
+        "200":
+          description: Service updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/service-categories:
+    get:
+      tags: [Admin]
+      summary: List all service categories (admin view)
+      description: Requires admin role.
+      operationId: adminListServiceCategories
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of service categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/forms:
+    get:
+      tags: [Admin]
+      summary: List all forms (admin view)
+      description: Requires admin role.
+      operationId: adminListForms
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of all forms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      tags: [Admin]
+      summary: Create a new form definition
+      description: Requires admin role.
+      operationId: adminCreateForm
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateFormBody"
+      responses:
+        "201":
+          description: Form created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/forms/{id}:
+    put:
+      tags: [Admin]
+      summary: Update a form definition
+      description: Requires admin role.
+      operationId: adminUpdateForm
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateFormBody"
+      responses:
+        "200":
+          description: Form updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a form definition
+      description: Requires admin role. Sets is_deleted = true; row is filtered from all list/read endpoints.
+      operationId: adminDeleteForm
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Form soft-deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/submissions:
+    get:
+      tags: [Admin]
+      summary: List all submissions with filtering
+      description: Requires admin role.
+      operationId: adminListAllSubmissions
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: formId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [submitted, in-review, approved, rejected, completed]
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of all submissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/submissions/{id}:
+    get:
+      tags: [Admin]
+      summary: Get a single submission with full form schema and attachments
+      description: >
+        Requires admin role. Returns the {submission, form, attachments}
+        triple — the submission row joined with form_name, the full parent
+        form definition (including form_schema for label rendering), and
+        the file attachment metadata. No file bytes are included —
+        clients download via GET /files/{id}.
+      operationId: adminGetSubmission
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Submission detail triple
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SubmissionDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/submissions/{id}/status:
+    put:
+      tags: [Admin]
+      summary: Update submission status
+      description: Requires admin role.
+      operationId: adminUpdateSubmissionStatus
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateSubmissionStatusBody"
+      responses:
+        "200":
+          description: Submission status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/notifications:
+    get:
+      tags: [Admin]
+      summary: List all broadcast notifications
+      description: Requires admin role.
+      operationId: adminListBroadcasts
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of broadcast notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/notifications/broadcast:
+    post:
+      tags: [Admin]
+      summary: Send a broadcast notification
+      description: Requires admin role.
+      operationId: adminBroadcastNotification
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminBroadcastNotificationBody"
+      responses:
+        "201":
+          description: Broadcast notification sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users (paginated, with optional role and search filters)
+      description: Requires admin role.
+      operationId: adminListUsers
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [viewer, submitter, editor, manager, admin, super_admin]
+        - name: search
+          in: query
+          description: Case-insensitive substring match against email and display name.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        "200":
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AdminUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/users/{id}:
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a user
+      description: >
+        Requires admin role. Sets is_deleted = true AND is_active = false in a
+        single statement, so the row is filtered from every list/read query and
+        cannot reauthenticate via SSO. Self-deletion is blocked with 400.
+      operationId: adminDeleteUser
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: User soft-deleted
+        "400":
+          description: Self-delete attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/users/{id}/role:
+    put:
+      tags: [Admin]
+      summary: Change a user's role
+      description: >
+        Requires admin role. Self-role-change is blocked with 400 (foot-gun
+        guard — the actor would lose admin access mid-session). Writes an
+        audit_log entry with before/after role.
+      operationId: adminUpdateUserRole
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRoleInput"
+      responses:
+        "200":
+          description: User role updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AdminUser"
+        "400":
+          description: Self-role-change attempt or invalid role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/users/{id}/status:
+    put:
+      tags: [Admin]
+      summary: Toggle a user's is_active status
+      description: >
+        Requires admin role. Self-toggle is blocked with 400 — an admin
+        disabling themselves would lose access mid-session. Writes an
+        audit_log entry with before/after status.
+      operationId: adminUpdateUserStatus
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserStatusInput"
+      responses:
+        "200":
+          description: User status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AdminUser"
+        "400":
+          description: Self-toggle attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Landing
+  # ═══════════════════════════════════════════════════════════════
+  /landing:
+    get:
+      tags: [Landing]
+      summary: Get aggregated landing page data
+      operationId: getLandingPageData
+      security: []
+      responses:
+        "200":
+          description: Landing page data (stats, featured resources, services, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Contact
+  # ═══════════════════════════════════════════════════════════════
+  /contact:
+    post:
+      tags: [Contact]
+      summary: Submit a public contact inquiry
+      description: >
+        Public — anyone can submit a contact inquiry. No auth required. CSRF
+        protection is applied at the `/api` mount, and the global API rate
+        limiter caps abuse. The request IP and user-agent are recorded on
+        the server for audit correlation but are not echoed back.
+      operationId: submitContact
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitContactBody"
+      responses:
+        "201":
+          description: Inquiry recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ContactInquirySubmission"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Blog (public)
+  # ═══════════════════════════════════════════════════════════════
+  /blog:
+    get:
+      tags: [Blog]
+      summary: List published blog posts (paginated)
+      description: Public — returns only posts where is_published = true AND published_at <= NOW(). Drafts are not visible.
+      operationId: listBlogPosts
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 12
+        - name: tag
+          in: query
+          description: Filter to posts whose tags array contains this tag.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 60
+      responses:
+        "200":
+          description: Paginated list of published blog posts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BlogPost"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /blog/{slug}:
+    get:
+      tags: [Blog]
+      summary: Get a single published blog post by slug
+      description: >
+        Public — returns the post only if is_published = true AND
+        published_at <= NOW(). Drafts and unpublished posts return 404 so
+        the public API never reveals the existence of unpublished URLs.
+      operationId: getBlogPost
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            maxLength: 200
+      responses:
+        "200":
+          description: Blog post
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/BlogPost"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"

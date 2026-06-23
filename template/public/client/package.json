@@ -1,0 +1,69 @@
+{
+  "name": "app-template",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint . --fix",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@formkit/themes": "^1.6.0",
+    "@formkit/vue": "^1.6.0",
+    "@primeuix/themes": "^2.0.3",
+    "@vue-leaflet/vue-leaflet": "^0.10.1",
+    "axios": "^1.7.0",
+    "chart.js": "^4.5.1",
+    "dompurify": "^3.2.0",
+    "leaflet": "^1.9.4",
+    "lucide-vue-next": "^0.577.0",
+    "pinia": "^3.0.0",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.5.4",
+    "vue": "^3.5.25",
+    "vue-chartjs": "^5.3.3",
+    "vue-router": "^4.6.4"
+  },
+  "pwa-icons-note": "Replace public/pwa-192x192.png, public/pwa-512x512.png, and public/apple-touch-icon-180x180.png with your app icons. Use @vite-pwa/assets-generator to generate from an SVG source: npx @vite-pwa/assets-generator --preset minimal public/favicon.svg",
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@primevue/auto-import-resolver": "^4.5.4",
+    "@tailwindcss/vite": "^4.2.1",
+    "@types/dompurify": "^3.0.5",
+    "@types/leaflet": "^1.9.8",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/test-utils": "^2.4.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-vue": "^10.0.0",
+    "globals": "^17.4.0",
+    "happy-dom": "^20.8.4",
+    "tailwindcss": "^4.2.1",
+    "terser": "^5.30.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
+    "unplugin-vue-components": "^28.0.0",
+    "vite": "^6.4.2",
+    "vite-plugin-pwa": "^0.21.2",
+    "vitest": "^3.0.0",
+    "vue-eslint-parser": "^10.0.0",
+    "vue-tsc": "^2.2.0"
+  },
+  "overrides": {
+    "workbox-build": {
+      "@rollup/plugin-terser": "^1.0.0"
+    },
+    "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+    "serialize-javascript": "^7.0.5",
+    "eslint": {
+      "brace-expansion": "^1.1.13"
+    },
+    "js-cookie": "^3.0.6",
+    "cookie": "^0.7.0"
+  }
+}

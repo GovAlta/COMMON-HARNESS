@@ -1,0 +1,78 @@
+﻿# Dockerignore for the public template.
+#
+# Purpose: prevent dev-only secrets and bulky workspace files from entering
+# ANY Docker build context (both the builder layer and the runtime layer).
+# The builder stage's COPY commands include `server/` and `client/`; without
+# this file, dev JWT keypairs, .env files, and node_modules would all be
+# copied into the image's layer history — recoverable by anyone who pulls
+# the image, even from intermediate layers.
+#
+# Closes blueteam finding CC-003 (T-006 dev-keys-in-image) and removes the
+# need for RA-001 (template dev JWT keys) in production builds.
+
+# ─── Secrets (CRITICAL — these must NEVER enter the image) ─────────────
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+client/.env
+client/.env.*
+!client/.env.example
+
+# Dev JWT keypairs — production loads keys from Azure Key Vault per ADR-003.
+# These PEM files exist only for `npm run dev:all` local convenience.
+server/keys/
+server/keys/*.pem
+
+# ─── Build artefacts (regenerated inside the builder stage) ────────────
+node_modules/
+**/node_modules/
+server/dist/
+client/dist/
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+
+# ─── Test, dev tooling, scratch ────────────────────────────────────────
+**/coverage/
+**/.lighthouseci/
+**/.nyc_output/
+.vscode/
+.idea/
+**/*.log
+**/.DS_Store
+**/Thumbs.db
+**/.cache/
+**/tmp/
+**/temp/
+
+# ─── Source-control + CI tooling ───────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.github/
+.gitlab/
+.husky/
+
+# ─── Test artefacts ─────────────────────────────────────────────────────
+test/
+**/__tests__/
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+**/e2e/
+playwright-report/
+test-results/
+
+# ─── Velocity / harness state (project-only, never in the image) ───────
+.ai/
+.claude/
+velocity/
+
+# ─── Documentation (optional — keep if you want README in the image) ───
+**/*.md
+!server/dist/**/*.md

@@ -1,0 +1,829 @@
+{
+  "remediation_report": {
+    "metadata": {
+      "source_poc_report": "poc_testing_ET002.md",
+      "source_code_analysis_report": "code_analysis_deliverable_ET002.md",
+      "generated": "2026-02-19",
+      "total_entries": 11,
+      "severity_breakdown": {
+        "critical": 1,
+        "high": 4,
+        "medium": 6,
+        "low": 0
+      }
+    },
+    "priority_implementation_order": [
+      {
+        "rem_id": "REM-05",
+        "rationale": "CRITICAL — disabling mock auth in production neutralises the most severe authentication bypass and breaks Attack Chains 1 and 2. Quick win: eliminates 2 Critical + 1 High finding.",
+        "deploy_together_with": ["REM-13"]
+      },
+      {
+        "rem_id": "REM-13",
+        "rationale": "HIGH — enables session cookies in production behind reverse proxy. Must deploy with REM-05 to avoid exposing mock auth once sessions work.",
+        "deploy_together_with": ["REM-05"]
+      },
+      {
+        "rem_id": "REM-10",
+        "rationale": "HIGH — fixes CORS origin leak from localhost default; removes credentialed cross-origin attack surface. Breaks Attack Chain 3.",
+        "deploy_together_with": []
+      },
+      {
+        "rem_id": "REM-07",
+        "rationale": "HIGH — applies requireAuth middleware to /me and /logout routes for defense-in-depth on private endpoints.",
+        "deploy_together_with": []
+      },
+      {
+        "rem_id": "REM-08",
+        "rationale": "HIGH — filters OAuth tokens from /me endpoint response. Prevents token exfiltration when Entra ID is active.",
+        "deploy_together_with": []
+      },
+      {
+        "rem_id": "REM-11",
+        "rationale": "MEDIUM — tightens CSRF callback exemption to exact path match. Reduces CSRF bypass surface area.",
+        "deploy_together_with": []
+      },
+      {
+        "rem_id": "REM-01",
+        "rationale": "MEDIUM — reduces information disclosure on health, info, and auth status endpoints. Breaks Attack Chain 2 reconnaissance.",
+        "deploy_together_with": []
+      },
+      {
+        "rem_id": "REM-15",
+        "rationale": "MEDIUM — adds redirect URL validation. Prevents open redirect via WEB_URL.",
+        "deploy_together_with": []
+      },
+      {
+        "rem_id": "REM-12",
+        "rationale": "MEDIUM — strengthens CSP by tightening imgSrc, adding explicit CDN allowlist, and additional directives. Partially breaks Attack Chain 4.",
+        "deploy_together_with": ["REM-14"]
+      },
+      {
+        "rem_id": "REM-14",
+        "rationale": "MEDIUM — adds Subresource Integrity (SRI) attributes to third-party resources. Breaks Attack Chain 4.",
+        "deploy_together_with": ["REM-12"]
+      },
+      {
+        "rem_id": "REM-04",
+        "rationale": "MEDIUM — applies rate limiting to CSRF token endpoint. Reduces session store exhaustion risk.",
+        "deploy_together_with": []
+      }
+    ],
+    "remediation_entries": [
+      {
+        "rem_id": "REM-05",
+        "title": "Mock Authentication Driver Active in Production",
+        "severity": "CRITICAL",
+        "related_poc_ids": ["PoC-05", "PoC-06"],
+        "quick_win": true,
+        "verified": true,
+        "root_cause": "The AUTH_DRIVER environment variable defaults to 'mock' when not explicitly set (apps/api/src/services/auth.service.ts, line 65). The mock driver at packages/auth/src/drivers/mock.driver.ts lines 63-87 accepts arbitrary user selection via query parameters with no cryptographic validation, allowing any caller to authenticate as any hardcoded user including admin. The callback endpoint (mock.driver.ts lines 77-86) directly trusts the mockUserId query parameter without HMAC, nonce, or state verification.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/services/auth.service.ts",
+            "lines": "63-89",
+            "role": "config"
+          },
+          {
+            "file_path": "packages/auth/src/drivers/mock.driver.ts",
+            "lines": "63-71",
+            "role": "source"
+          },
+          {
+            "file_path": "packages/auth/src/drivers/mock.driver.ts",
+            "lines": "77-86",
+            "role": "sink"
+          },
+          {
+            "file_path": "packages/config/src/schemas/api.config.schema.ts",
+            "lines": "18",
+            "role": "config"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/services/auth.service.ts",
+            "line_start": 63,
+            "line_end": 89,
+            "language": "typescript",
+            "current_code": "  constructor() {\n    // Initialize the appropriate driver based on environment\n    const authDriver = process.env.AUTH_DRIVER || 'mock'\n    const callbackUrl = AuthService.getCallbackUrl()\n\n    switch (authDriver) {\n      case 'mock':\n        this.driver = new MockAuthDriver({\n          callbackUrl\n        })\n        break\n\n      case 'saml':\n        this.driver = new SamlAuthDriver({\n          callbackUrl\n        })\n        break\n\n      case 'entra-id':\n        this.driver = new EntraIdAuthDriver({\n          callbackUrl\n        })\n        break\n\n      default:\n        throw new Error(`Unsupported auth driver: ${authDriver}. Valid options: mock, saml, entra-id`)\n    }\n  }",
+            "replacement_code": "  constructor() {\n    // Initialize the appropriate driver based on environment\n    const authDriver = process.env.AUTH_DRIVER || 'mock'\n    const callbackUrl = AuthService.getCallbackUrl()\n    const isProduction = process.env.NODE_ENV === 'production'\n\n    // SECURITY: Block mock driver in production environments\n    if (authDriver === 'mock' && isProduction) {\n      throw new Error(\n        'FATAL: Mock authentication driver cannot be used in production. ' +\n        'Set AUTH_DRIVER to \"saml\" or \"entra-id\" in your production environment variables.'\n      )\n    }\n\n    switch (authDriver) {\n      case 'mock':\n        this.driver = new MockAuthDriver({\n          callbackUrl\n        })\n        break\n\n      case 'saml':\n        this.driver = new SamlAuthDriver({\n          callbackUrl\n        })\n        break\n\n      case 'entra-id':\n        this.driver = new EntraIdAuthDriver({\n          callbackUrl\n        })\n        break\n\n      default:\n        throw new Error(`Unsupported auth driver: ${authDriver}. Valid options: mock, saml, entra-id`)\n    }\n  }",
+            "explanation": "Adding a hard guard that throws a fatal startup error if the mock driver is selected in production prevents the application from ever running with mock authentication in a production environment. This fail-closed approach ensures that even if AUTH_DRIVER is accidentally omitted from environment variables, the production server will refuse to start rather than silently enabling authentication bypass."
+          },
+          {
+            "file_path": "packages/config/src/schemas/api.config.schema.ts",
+            "line_start": 18,
+            "line_end": 18,
+            "language": "typescript",
+            "current_code": "const authDriverSchema = z.enum(['mock', 'saml', 'entra-id']).default('mock')",
+            "replacement_code": "const authDriverSchema = z.enum(['mock', 'saml', 'entra-id'])\n  .describe('Authentication driver (mock is only allowed in non-production environments)')",
+            "explanation": "Removing the .default('mock') from the Zod schema forces AUTH_DRIVER to be explicitly provided. If the schema is ever used for environment validation at startup (as intended), omitting AUTH_DRIVER will produce a validation error rather than silently defaulting to the insecure mock driver."
+          },
+          {
+            "file_path": "packages/auth/src/drivers/mock.driver.ts",
+            "line_start": 77,
+            "line_end": 86,
+            "language": "typescript",
+            "current_code": "  async callback(req: Request, _res: Response): Promise<AuthUser> {\n    const mockUserId = req.query.mockUserId as string\n\n    // Find the user by ID - default to first user if not found\n    const user = this.mockUsers.find((u) => u.id === mockUserId) || this.mockUsers[0]!\n\n    // Save to session\n    this.saveUserToSession(req, user)\n\n    return user\n  }",
+            "replacement_code": "  async callback(req: Request, _res: Response): Promise<AuthUser> {\n    const mockUserId = req.query.mockUserId as string\n\n    if (!mockUserId) {\n      throw new Error('Mock callback requires mockUserId parameter')\n    }\n\n    // Find the user by ID - reject if not found (no silent fallback)\n    const user = this.mockUsers.find((u) => u.id === mockUserId)\n    if (!user) {\n      throw new Error(`Mock user not found: ${mockUserId}`)\n    }\n\n    // Save to session\n    this.saveUserToSession(req, user)\n\n    return user\n  }",
+            "explanation": "Even in development, the callback should not silently fall back to the first user when an invalid or missing mockUserId is provided. This defense-in-depth change ensures that if the mock driver somehow runs, it at least requires a valid mock user ID and rejects unknown values rather than granting default access."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "negative",
+            "description": "Set AUTH_DRIVER=mock in production environment and restart — server should fail to start",
+            "command": "AUTH_DRIVER=mock NODE_ENV=production node dist/server.js",
+            "expected_result": "Process exits with error: 'FATAL: Mock authentication driver cannot be used in production.'"
+          },
+          {
+            "step": 2,
+            "type": "positive",
+            "description": "Set AUTH_DRIVER=saml or entra-id in production and restart — server should start normally",
+            "command": "AUTH_DRIVER=saml NODE_ENV=production node dist/server.js",
+            "expected_result": "Server starts successfully without error"
+          },
+          {
+            "step": 3,
+            "type": "negative",
+            "description": "Verify mock auth login no longer works in production",
+            "command": "curl -s -i --max-redirs 0 \"${BASE_URL}/api/v1/auth/login?user=1\"",
+            "expected_result": "Should not return 302 with mockUserId. Either 500 (if mock driver blocked) or SAML/Entra redirect."
+          },
+          {
+            "step": 4,
+            "type": "negative",
+            "description": "Verify mock callback no longer works in production",
+            "command": "curl -s -i --max-redirs 0 \"${BASE_URL}/api/v1/auth/callback?mockUserId=mock-user-2\"",
+            "expected_result": "Should not create admin session. Returns error from SAML/Entra callback handler."
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Chain 1: Mock Auth Admin Bypass", "Chain 2: Info Disclosure -> Mock Auth"],
+          "functional_impact": "Production deployment must have AUTH_DRIVER set to 'saml' or 'entra-id'. Development environments are unaffected.",
+          "rollback_risk": "low",
+          "dependencies": ["REM-13"]
+        }
+      },
+      {
+        "rem_id": "REM-13",
+        "title": "Trust Proxy Misconfiguration / Session Cookie Failure",
+        "severity": "HIGH",
+        "related_poc_ids": ["PoC-13"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The Express application at apps/api/src/app.ts does not call app.set('trust proxy', ...) anywhere in the codebase. The session middleware at line 108 sets cookie.secure: true when NODE_ENV === 'production'. Behind Render's reverse proxy and Cloudflare CDN, Express sees plain HTTP connections and refuses to set Set-Cookie headers for secure cookies, breaking all session functionality in production.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "lines": "17-18, 101-115",
+            "role": "config"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "line_start": 17,
+            "line_end": 18,
+            "language": "typescript",
+            "current_code": "export function createApp(): Express {\n  const app = express()\n\n  // Security headers with Helmet",
+            "replacement_code": "export function createApp(): Express {\n  const app = express()\n\n  // Trust the first proxy hop (Render/Cloudflare reverse proxy)\n  // Required for: secure cookies, accurate req.ip, req.protocol detection\n  // Value of 1 means trust only the immediate reverse proxy, not arbitrary X-Forwarded-* headers\n  if (process.env.NODE_ENV === 'production') {\n    app.set('trust proxy', 1)\n  }\n\n  // Security headers with Helmet",
+            "explanation": "Setting trust proxy to 1 tells Express to trust the first hop proxy's X-Forwarded-Proto and X-Forwarded-For headers. This allows Express to correctly determine that the connection is HTTPS (via req.secure) and issue Set-Cookie headers with the Secure flag. The value 1 is used instead of true to only trust the immediate proxy and not blindly trust all forwarded headers, which prevents IP spoofing through chained proxies."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "positive",
+            "description": "Deploy with trust proxy fix and test CSRF token endpoint for Set-Cookie",
+            "command": "curl -v -s \"${BASE_URL}/api/v1/csrf-token\" 2>&1 | grep -i \"set-cookie\"",
+            "expected_result": "set-cookie: connect.sid=s%3A...; Path=/; HttpOnly; Secure; SameSite=Lax"
+          },
+          {
+            "step": 2,
+            "type": "positive",
+            "description": "Verify session persistence through auth callback",
+            "command": "curl -v -s -c cookies.txt \"${BASE_URL}/api/v1/csrf-token\"",
+            "expected_result": "cookies.txt contains connect.sid cookie"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Enables session functionality (prerequisite for all authenticated features)"],
+          "functional_impact": "Restores session cookie issuance in production. All session-dependent features (login, CSRF, user profile) will begin working.",
+          "rollback_risk": "medium",
+          "dependencies": ["REM-05"]
+        }
+      },
+      {
+        "rem_id": "REM-10",
+        "title": "CORS Development Configuration Leaked to Production",
+        "severity": "HIGH",
+        "related_poc_ids": ["PoC-10"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The CORS middleware at apps/api/src/app.ts line 53 falls back to 'http://localhost:5173' when CORS_ORIGIN is not set. In the production deployment, CORS_ORIGIN is not configured, causing every response to include access-control-allow-origin: http://localhost:5173 with access-control-allow-credentials: true.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "lines": "50-56",
+            "role": "config"
+          },
+          {
+            "file_path": "packages/config/src/schemas/api.config.schema.ts",
+            "lines": "109",
+            "role": "config"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "line_start": 50,
+            "line_end": 56,
+            "language": "typescript",
+            "current_code": "  // CORS - must be before session to allow credentials\n  app.use(\n    cors({\n      origin: process.env.CORS_ORIGIN || 'http://localhost:5173',\n      credentials: true,\n    })\n  )",
+            "replacement_code": "  // CORS - must be before session to allow credentials\n  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173'\n\n  // SECURITY: Validate CORS origin is not a development default in production\n  if (process.env.NODE_ENV === 'production' && corsOrigin.includes('localhost')) {\n    console.error(\n      'WARNING: CORS_ORIGIN contains \"localhost\" in production. ' +\n      'Set CORS_ORIGIN to your production frontend URL (e.g., https://your-app.onrender.com).'\n    )\n  }\n\n  app.use(\n    cors({\n      origin: corsOrigin,\n      credentials: true,\n    })\n  )",
+            "explanation": "This adds a runtime warning when the CORS origin contains localhost in production. The definitive fix is setting the CORS_ORIGIN environment variable in the production deployment to the actual frontend URL. The code-level guard provides a safety net that logs a visible warning if the environment variable is misconfigured."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "positive",
+            "description": "After setting CORS_ORIGIN, test with matching origin",
+            "command": "curl -s -i -H \"Origin: https://your-app.onrender.com\" \"${BASE_URL}/api/v1/auth/status\"",
+            "expected_result": "access-control-allow-origin: https://your-app.onrender.com"
+          },
+          {
+            "step": 2,
+            "type": "negative",
+            "description": "Test with localhost origin (should be blocked)",
+            "command": "curl -s -i -H \"Origin: http://localhost:5173\" \"${BASE_URL}/api/v1/auth/status\"",
+            "expected_result": "No access-control-allow-origin header in response (CORS blocked)"
+          },
+          {
+            "step": 3,
+            "type": "negative",
+            "description": "Test with malicious origin",
+            "command": "curl -s -i -H \"Origin: https://evil.com\" \"${BASE_URL}/api/v1/auth/me\"",
+            "expected_result": "No access-control-allow-origin header in response"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Chain 3: Cross-Origin Session Theft"],
+          "functional_impact": "Frontend must be served from the configured CORS origin. Development environments remain on localhost:5173.",
+          "rollback_risk": "low",
+          "dependencies": []
+        }
+      },
+      {
+        "rem_id": "REM-07",
+        "title": "Missing requireAuth Middleware on /me and /logout",
+        "severity": "HIGH",
+        "related_poc_ids": ["PoC-07", "PoC-09"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The requireAuth and requireRole middleware functions are defined in apps/api/src/middleware/auth.middleware.ts (lines 13-30, 35-65) but are never imported or applied to any route. The /me endpoint at auth.routes.ts line 41 and /logout endpoint at line 34 are documented as @access Private but have no authentication middleware. /me relies on a manual controller-level check (auth.controller.ts line 84); /logout has no authentication check at all.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/routes/auth.routes.ts",
+            "lines": "34, 41",
+            "role": "config"
+          },
+          {
+            "file_path": "apps/api/src/middleware/auth.middleware.ts",
+            "lines": "13-30",
+            "role": "source"
+          },
+          {
+            "file_path": "apps/api/src/controllers/auth.controller.ts",
+            "lines": "80-92",
+            "role": "sink"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/routes/auth.routes.ts",
+            "line_start": 1,
+            "line_end": 50,
+            "language": "typescript",
+            "current_code": "/**\n * Authentication Routes\n *\n * Defines all authentication-related endpoints with rate limiting for security\n */\n\nimport express from 'express'\nimport { authController } from '../controllers/auth.controller.js'\nimport { authRateLimiter } from '../middleware/rate-limit.middleware.js'\n\nconst router = express.Router()\n\n/**\n * @route   GET /api/v1/auth/login\n * @desc    Initiate authentication flow\n * @access  Public\n * @rateLimit 5 requests per 15 minutes\n */\nrouter.get('/login', authRateLimiter, (req, res) => authController.login(req, res))\n\n/**\n * @route   GET /api/v1/auth/callback\n * @desc    Handle authentication callback from IdP\n * @access  Public\n * @rateLimit 5 requests per 15 minutes\n */\nrouter.get('/callback', authRateLimiter, (req, res) => authController.callback(req, res))\n\n/**\n * @route   POST /api/v1/auth/logout\n * @desc    Logout and destroy session\n * @access  Private\n */\nrouter.post('/logout', (req, res) => authController.logout(req, res))\n\n/**\n * @route   GET /api/v1/auth/me\n * @desc    Get current authenticated user\n * @access  Private\n */\nrouter.get('/me', (req, res) => authController.me(req, res))\n\n/**\n * @route   GET /api/v1/auth/status\n * @desc    Check authentication status\n * @access  Public\n */\nrouter.get('/status', (req, res) => authController.status(req, res))\n\nexport default router",
+            "replacement_code": "/**\n * Authentication Routes\n *\n * Defines all authentication-related endpoints with rate limiting for security\n */\n\nimport express from 'express'\nimport { authController } from '../controllers/auth.controller.js'\nimport { authRateLimiter } from '../middleware/rate-limit.middleware.js'\nimport { requireAuth } from '../middleware/auth.middleware.js'\n\nconst router = express.Router()\n\n/**\n * @route   GET /api/v1/auth/login\n * @desc    Initiate authentication flow\n * @access  Public\n * @rateLimit 5 requests per 15 minutes\n */\nrouter.get('/login', authRateLimiter, (req, res) => authController.login(req, res))\n\n/**\n * @route   GET /api/v1/auth/callback\n * @desc    Handle authentication callback from IdP\n * @access  Public\n * @rateLimit 5 requests per 15 minutes\n */\nrouter.get('/callback', authRateLimiter, (req, res) => authController.callback(req, res))\n\n/**\n * @route   POST /api/v1/auth/logout\n * @desc    Logout and destroy session\n * @access  Private (requires authentication)\n */\nrouter.post('/logout', requireAuth, (req, res) => authController.logout(req, res))\n\n/**\n * @route   GET /api/v1/auth/me\n * @desc    Get current authenticated user\n * @access  Private (requires authentication)\n */\nrouter.get('/me', requireAuth, (req, res) => authController.me(req, res))\n\n/**\n * @route   GET /api/v1/auth/status\n * @desc    Check authentication status\n * @access  Public\n */\nrouter.get('/status', (req, res) => authController.status(req, res))\n\nexport default router",
+            "explanation": "Importing and applying requireAuth middleware to the /logout and /me routes enforces authentication at the router level, consistent with the application's middleware architecture. This provides defense-in-depth: even if the controller-level check in /me is accidentally removed during refactoring, the middleware will still block unauthenticated requests. The /logout route now correctly requires an active session before allowing session destruction."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "negative",
+            "description": "Test /me without session cookie",
+            "command": "curl -s \"${BASE_URL}/api/v1/auth/me\"",
+            "expected_result": "401 {\"success\":false,\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Authentication required\",...}}"
+          },
+          {
+            "step": 2,
+            "type": "negative",
+            "description": "Test /logout without session cookie (with CSRF token)",
+            "command": "CSRF=$(curl -s \"${BASE_URL}/api/v1/csrf-token\" | jq -r '.data.token') && curl -s -X POST -H \"X-CSRF-Token: ${CSRF}\" \"${BASE_URL}/api/v1/auth/logout\"",
+            "expected_result": "401 {\"success\":false,\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Authentication required\",...}}"
+          },
+          {
+            "step": 3,
+            "type": "positive",
+            "description": "Test /me with valid authenticated session",
+            "command": "curl -s -b \"connect.sid=<valid-session>\" \"${BASE_URL}/api/v1/auth/me\"",
+            "expected_result": "200 with user data object"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Chain 1: Mock Auth Admin Bypass (prevents unauthenticated /me access)", "Chain 3: Cross-Origin Session Theft (logout requires auth)"],
+          "functional_impact": "Unauthenticated calls to /me and /logout now receive 401 from middleware instead of controller. Legitimate authenticated users are unaffected.",
+          "rollback_risk": "low",
+          "dependencies": ["REM-13"]
+        }
+      },
+      {
+        "rem_id": "REM-08",
+        "title": "OAuth Token Exposure via /me Endpoint (Entra ID)",
+        "severity": "HIGH",
+        "related_poc_ids": ["PoC-08"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The Entra ID driver at packages/auth/src/drivers/entra-id.driver.ts lines 190-203 stores OAuth tokens (accessToken, refreshToken, idToken, expiresAt) along with all OIDC claims in the attributes field of the AuthUser object. The /me endpoint at apps/api/src/controllers/auth.controller.ts line 102 returns user.attributes || {} directly to the client without filtering sensitive fields.",
+        "affected_files": [
+          {
+            "file_path": "packages/auth/src/drivers/entra-id.driver.ts",
+            "lines": "190-203",
+            "role": "source"
+          },
+          {
+            "file_path": "apps/api/src/controllers/auth.controller.ts",
+            "lines": "94-105",
+            "role": "sink"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/controllers/auth.controller.ts",
+            "line_start": 94,
+            "line_end": 105,
+            "language": "typescript",
+            "current_code": "      res.json({\n        success: true,\n        data: {\n          user: {\n            id: user.id,\n            email: user.email,\n            name: user.name,\n            roles: user.roles || [],\n            attributes: user.attributes || {}\n          }\n        }\n      })",
+            "replacement_code": "      // Filter sensitive fields from attributes before returning to client\n      const SENSITIVE_ATTRIBUTE_KEYS = [\n        'accessToken', 'refreshToken', 'idToken', 'expiresAt',\n        'access_token', 'refresh_token', 'id_token', 'expires_at',\n        'nonce', 'at_hash', 'c_hash'\n      ]\n      const safeAttributes: Record<string, any> = {}\n      if (user.attributes) {\n        for (const [key, value] of Object.entries(user.attributes)) {\n          if (!SENSITIVE_ATTRIBUTE_KEYS.includes(key)) {\n            safeAttributes[key] = value\n          }\n        }\n      }\n\n      res.json({\n        success: true,\n        data: {\n          user: {\n            id: user.id,\n            email: user.email,\n            name: user.name,\n            roles: user.roles || [],\n            attributes: safeAttributes\n          }\n        }\n      })",
+            "explanation": "This implements an explicit denylist filter that strips OAuth tokens and other security-sensitive OIDC claim fields from the attributes object before returning it to the client. The tokens remain in the server-side session for backend API-to-API calls if needed but are never exposed to the frontend. Both camelCase (accessToken) and snake_case (access_token) variants are filtered to cover both the Entra ID driver's mapped names and any raw OIDC claim passthrough via the spread operator at line 197."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "negative",
+            "description": "Authenticate via Entra ID, then check /me response for token leakage",
+            "command": "curl -s -b \"connect.sid=<valid-entra-session>\" \"${BASE_URL}/api/v1/auth/me\"",
+            "expected_result": "Response contains user data but NOT accessToken, refreshToken, or idToken in attributes"
+          },
+          {
+            "step": 2,
+            "type": "positive",
+            "description": "Verify that non-sensitive attributes (department, firstName, lastName) are still returned",
+            "command": "curl -s -b \"connect.sid=<valid-entra-session>\" \"${BASE_URL}/api/v1/auth/me\" | jq '.data.user.attributes'",
+            "expected_result": "Contains firstName, lastName, tenantId, objectId but no token fields"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Prevents token exfiltration via /me endpoint", "Blocks lateral movement from session theft to Microsoft Graph API access"],
+          "functional_impact": "Frontend no longer receives OAuth tokens. If the frontend needs to call Microsoft Graph, it should proxy through the backend instead of using client-side tokens.",
+          "rollback_risk": "low",
+          "dependencies": ["REM-07"]
+        }
+      },
+      {
+        "rem_id": "REM-11",
+        "title": "Auth Callback CSRF Exemption Too Broad",
+        "severity": "MEDIUM",
+        "related_poc_ids": ["PoC-11"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The CSRF middleware at apps/api/src/middleware/csrf.middleware.ts line 34 uses req.path.includes('/auth/callback') which is an overly broad substring match. Any path containing the string '/auth/callback' anywhere (e.g., /api/v1/admin/auth/callback/settings) would bypass CSRF protection. Combined with the mock driver's lack of cryptographic validation, this enables login CSRF attacks.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/middleware/csrf.middleware.ts",
+            "lines": "33-36",
+            "role": "config"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/middleware/csrf.middleware.ts",
+            "line_start": 33,
+            "line_end": 36,
+            "language": "typescript",
+            "current_code": "  // Skip CSRF for authentication callback endpoints (handled by auth providers)\n  if (req.path.includes('/auth/callback')) {\n    return next()\n  }",
+            "replacement_code": "  // Skip CSRF for the specific authentication callback endpoint (handled by auth providers)\n  // Use exact path match to prevent bypassing CSRF on other endpoints\n  if (req.path === '/api/v1/auth/callback') {\n    return next()\n  }",
+            "explanation": "Changing from .includes() substring matching to strict equality (===) ensures that only the exact auth callback path bypasses CSRF validation. This prevents an attacker from crafting a path that incidentally contains /auth/callback to bypass CSRF on unrelated endpoints. The CSRF exemption for the callback is necessary because SAML POST bindings and OIDC redirects originate from external identity providers that cannot include application CSRF tokens."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "positive",
+            "description": "Verify auth callback still works (SAML POST or OIDC redirect)",
+            "command": "curl -s -i --max-redirs 0 \"${BASE_URL}/api/v1/auth/callback?code=test\"",
+            "expected_result": "Processed by auth driver (no CSRF error)"
+          },
+          {
+            "step": 2,
+            "type": "negative",
+            "description": "Verify other paths containing /auth/callback are NOT exempt",
+            "command": "curl -s -X POST -H \"Content-Type: application/json\" \"${BASE_URL}/api/v1/test/auth/callback/admin\"",
+            "expected_result": "403 CSRF_MISSING (or 404 if endpoint does not exist)"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Tightens CSRF bypass surface area", "Reduces login CSRF risk"],
+          "functional_impact": "None — only the exact callback path is exempted, which is the only path that needs it.",
+          "rollback_risk": "low",
+          "dependencies": []
+        }
+      },
+      {
+        "rem_id": "REM-01",
+        "title": "Information Disclosure on Health, Info, and Auth Status Endpoints",
+        "severity": "MEDIUM",
+        "related_poc_ids": ["PoC-01", "PoC-02", "PoC-03"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "Three unauthenticated endpoints collectively reveal operational details: /api/v1/health (line 128, app.ts) exposes environment, version, database status, and pool metrics; /api/v1/info (line 178, app.ts) exposes the full API map, all supported authentication methods, and application identity; /api/v1/auth/status (line 122, auth.controller.ts) exposes the active authentication driver name. Together these eliminate the need for reconnaissance and directly reveal that the mock auth driver is active.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "lines": "128-175",
+            "role": "sink"
+          },
+          {
+            "file_path": "apps/api/src/app.ts",
+            "lines": "178-198",
+            "role": "sink"
+          },
+          {
+            "file_path": "apps/api/src/controllers/auth.controller.ts",
+            "lines": "122-132",
+            "role": "sink"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "line_start": 153,
+            "line_end": 175,
+            "language": "typescript",
+            "current_code": "    res.status(statusCode).json({\n      success: dbHealthy,\n      data: {\n        status: overallStatus,\n        database: dbStatus,\n        timestamp: new Date().toISOString(),\n        environment: process.env.NODE_ENV || 'development',\n        version: '1.0.0',\n        pool: poolHealth\n          ? {\n              utilization: `${poolHealth.utilization}%`,\n              connections: {\n                total: poolHealth.stats.total,\n                idle: poolHealth.stats.idle,\n                active: poolHealth.stats.total - poolHealth.stats.idle,\n                waiting: poolHealth.stats.waiting,\n              },\n              warnings: poolHealth.warnings,\n            }\n          : undefined,\n      },\n    })",
+            "replacement_code": "    // Return minimal health status for unauthenticated callers\n    // Detailed pool metrics are logged server-side by db-metrics.middleware\n    res.status(statusCode).json({\n      success: dbHealthy,\n      data: {\n        status: overallStatus,\n      },\n    })",
+            "explanation": "The health endpoint's primary purpose is for load balancer and monitoring probes, which only need a status code and a simple healthy/degraded indicator. Removing environment, version, database configuration details, timestamps, and pool statistics from the public response eliminates fingerprinting and timing attack vectors. Detailed metrics remain available through server-side logging."
+          },
+          {
+            "file_path": "apps/api/src/app.ts",
+            "line_start": 178,
+            "line_end": 198,
+            "language": "typescript",
+            "current_code": "  // API info endpoint\n  app.get('/api/v1/info', (_req: Request, res: Response) => {\n    res.json({\n      success: true,\n      data: {\n        name: process.env.APP_NAME || 'Enterprise Template',\n        version: 'v1',\n        description: 'Enterprise-grade template with Design System and dual authentication',\n        features: {\n          authentication: ['Mock', 'SAML 2.0', 'MS Entra ID'],\n          security: ['Helmet CSP', 'CSRF Protection', 'Rate Limiting', 'Input Validation', 'Secure Logging'],\n          design: 'Design System',\n        },\n        endpoints: {\n          health: '/api/v1/health',\n          info: '/api/v1/info',\n          csrfToken: '/api/v1/csrf-token',\n          auth: '/api/v1/auth',\n        },\n      },\n    })\n  })",
+            "replacement_code": "  // API info endpoint - returns minimal public information\n  app.get('/api/v1/info', (_req: Request, res: Response) => {\n    res.json({\n      success: true,\n      data: {\n        name: process.env.APP_NAME || 'Enterprise Template',\n        version: 'v1',\n      },\n    })\n  })",
+            "explanation": "Removing the full API endpoint map, list of supported authentication methods, and security features from the public info endpoint eliminates the reconnaissance value. The application name and API version are typically needed for UI display and client compatibility checks and are considered low-risk."
+          },
+          {
+            "file_path": "apps/api/src/controllers/auth.controller.ts",
+            "line_start": 122,
+            "line_end": 132,
+            "language": "typescript",
+            "current_code": "  async status(req: Request, res: Response) {\n    const user = authService.getCurrentUser(req)\n\n    res.json({\n      success: true,\n      data: {\n        authenticated: !!user,\n        driver: authService.getDriver().getDriverName()\n      }\n    })\n  }",
+            "replacement_code": "  async status(req: Request, res: Response) {\n    const user = authService.getCurrentUser(req)\n\n    res.json({\n      success: true,\n      data: {\n        authenticated: !!user,\n      }\n    })\n  }",
+            "explanation": "Removing the driver field from the auth status response prevents unauthenticated users from discovering which authentication backend is active. The frontend only needs to know whether the user is authenticated, not which driver is handling authentication. This removes the direct signal that tells attackers the mock driver is active."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "negative",
+            "description": "Verify health endpoint returns minimal data",
+            "command": "curl -s \"${BASE_URL}/api/v1/health\"",
+            "expected_result": "{\"success\":true,\"data\":{\"status\":\"healthy\"}} — should NOT contain environment, version, database, timestamp, pool"
+          },
+          {
+            "step": 2,
+            "type": "negative",
+            "description": "Verify info endpoint returns minimal data",
+            "command": "curl -s \"${BASE_URL}/api/v1/info\"",
+            "expected_result": "{\"success\":true,\"data\":{\"name\":\"...\",\"version\":\"v1\"}} — should NOT contain features, endpoints, authentication methods"
+          },
+          {
+            "step": 3,
+            "type": "negative",
+            "description": "Verify auth status no longer reveals driver",
+            "command": "curl -s \"${BASE_URL}/api/v1/auth/status\"",
+            "expected_result": "{\"success\":true,\"data\":{\"authenticated\":false}} — should NOT contain \"driver\":\"mock\""
+          },
+          {
+            "step": 4,
+            "type": "positive",
+            "description": "Verify health endpoint still returns correct status code for monitoring probes",
+            "command": "curl -s -o /dev/null -w \"%{http_code}\" \"${BASE_URL}/api/v1/health\"",
+            "expected_result": "200 when healthy, 503 when degraded"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Chain 2: Information Disclosure Reconnaissance"],
+          "functional_impact": "Monitoring systems that parse health check responses may need updating to match the simplified schema. Frontend status checks lose the driver name (should not be needed).",
+          "rollback_risk": "low",
+          "dependencies": []
+        }
+      },
+      {
+        "rem_id": "REM-15",
+        "title": "Open Redirect via WEB_URL Default",
+        "severity": "MEDIUM",
+        "related_poc_ids": ["PoC-15"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The post-authentication redirect at apps/api/src/controllers/auth.controller.ts lines 40-41 and 46-47 constructs the redirect URL from process.env.WEB_URL || 'http://localhost:5173' without validating it against an allowlist. In production, WEB_URL is not set, causing redirects to http://localhost:5173. If WEB_URL is ever set to an attacker-controlled value via environment variable manipulation, this becomes a full open redirect.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/controllers/auth.controller.ts",
+            "lines": "40-41, 46-47",
+            "role": "sink"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/controllers/auth.controller.ts",
+            "line_start": 35,
+            "line_end": 48,
+            "language": "typescript",
+            "current_code": "  async callback(req: Request, res: Response) {\n    try {\n      await authService.callback(req, res)\n\n      // Redirect to frontend after successful authentication\n      const redirectUrl = process.env.WEB_URL || 'http://localhost:5173'\n      res.redirect(`${redirectUrl}/profile`)\n    } catch (error) {\n      console.error('Callback error:', error)\n\n      // Redirect to login page with error\n      const redirectUrl = process.env.WEB_URL || 'http://localhost:5173'\n      res.redirect(`${redirectUrl}/login?error=auth_failed`)\n    }\n  }",
+            "replacement_code": "  async callback(req: Request, res: Response) {\n    try {\n      await authService.callback(req, res)\n\n      // Redirect to frontend after successful authentication\n      const redirectUrl = this.getSafeRedirectUrl()\n      res.redirect(`${redirectUrl}/profile`)\n    } catch (error) {\n      console.error('Callback error:', error)\n\n      // Redirect to login page with error\n      const redirectUrl = this.getSafeRedirectUrl()\n      res.redirect(`${redirectUrl}/login?error=auth_failed`)\n    }\n  }\n\n  /**\n   * Get validated redirect URL from environment.\n   * Only allows URLs matching known safe patterns.\n   */\n  private getSafeRedirectUrl(): string {\n    const webUrl = process.env.WEB_URL || 'http://localhost:5173'\n\n    // In production, validate the URL is HTTPS and not localhost\n    if (process.env.NODE_ENV === 'production') {\n      try {\n        const parsed = new URL(webUrl)\n        if (parsed.protocol !== 'https:') {\n          console.error(`WARNING: WEB_URL uses non-HTTPS protocol: ${parsed.protocol}`)\n        }\n        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {\n          console.error('WARNING: WEB_URL points to localhost in production.')\n        }\n      } catch {\n        console.error(`WARNING: WEB_URL is not a valid URL: ${webUrl}`)\n      }\n    }\n\n    // Strip trailing slash to prevent double-slash in path construction\n    return webUrl.replace(/\\/$/, '')\n  }",
+            "explanation": "This introduces a validation method that checks the WEB_URL value at runtime. In production, it warns about insecure protocols and localhost targets. The definitive fix is also an environment variable change: WEB_URL must be set to the production frontend URL. The code-level validation provides an additional safety layer."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "negative",
+            "description": "Verify post-auth redirect goes to production URL, not localhost",
+            "command": "curl -s -i --max-redirs 0 \"${BASE_URL}/api/v1/auth/callback?code=test\"",
+            "expected_result": "location: https://your-app.onrender.com/profile — NOT http://localhost:5173/profile"
+          },
+          {
+            "step": 2,
+            "type": "positive",
+            "description": "Verify redirect URL is well-formed with no double slashes",
+            "command": "curl -s -i --max-redirs 0 \"${BASE_URL}/api/v1/auth/callback?code=test\" | grep -i location",
+            "expected_result": "Location header contains valid URL with single-slash path separator"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Eliminates open redirect to localhost", "Prevents phishing via redirect manipulation"],
+          "functional_impact": "Post-auth redirects will go to the correct production frontend.",
+          "rollback_risk": "low",
+          "dependencies": []
+        }
+      },
+      {
+        "rem_id": "REM-12",
+        "title": "CSP unsafe-inline Weakens XSS Defense",
+        "severity": "MEDIUM",
+        "related_poc_ids": ["PoC-12"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The Content Security Policy at apps/api/src/app.ts lines 26-30 and 31-36 includes 'unsafe-inline' in both scriptSrc and styleSrc directives. This was added to accommodate Design System components that require inline scripts and styles, but it effectively neutralizes CSP as an XSS mitigation.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "lines": "26-30, 31-36",
+            "role": "config"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "line_start": 20,
+            "line_end": 48,
+            "language": "typescript",
+            "current_code": "  // Security headers with Helmet\n  app.use(\n    helmet({\n      contentSecurityPolicy: {\n        directives: {\n          defaultSrc: [\"'self'\"],\n          scriptSrc: [\n            \"'self'\",\n            \"'unsafe-inline'\", // Required for Design System components\n            'https://cdn.jsdelivr.net', // Design System components CDN\n          ],\n          styleSrc: [\n            \"'self'\",\n            \"'unsafe-inline'\", // Required for Design System components\n            'https://fonts.googleapis.com',\n            'https://cdn.jsdelivr.net',\n          ],\n          fontSrc: [\"'self'\", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],\n          imgSrc: [\"'self'\", 'data:', 'https:'],\n          connectSrc: [\"'self'\"],\n          frameSrc: [\"'none'\"],\n          objectSrc: [\"'none'\"],\n          upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,\n        },\n      },\n      crossOriginEmbedderPolicy: false, // Required for Design System components\n      crossOriginResourcePolicy: { policy: 'cross-origin' },\n    })\n  )",
+            "replacement_code": "  // Security headers with Helmet\n  // NOTE: Design System components currently require 'unsafe-inline' for scripts and styles.\n  // When Design System components support nonce-based CSP, replace 'unsafe-inline' with nonce middleware.\n  // See: https://content-security-policy.com/nonce/\n  app.use(\n    helmet({\n      contentSecurityPolicy: {\n        directives: {\n          defaultSrc: [\"'self'\"],\n          scriptSrc: [\n            \"'self'\",\n            \"'unsafe-inline'\", // TODO: Replace with nonce when Design System components support it\n            'https://cdn.jsdelivr.net',\n            'https://unpkg.com', // Ionicons CDN (pin to specific version via SRI)\n          ],\n          styleSrc: [\n            \"'self'\",\n            \"'unsafe-inline'\", // TODO: Replace with nonce when Design System components support it\n            'https://fonts.googleapis.com',\n            'https://cdn.jsdelivr.net',\n            'https://use.typekit.net', // Adobe Typekit for design system fonts\n          ],\n          fontSrc: [\"'self'\", 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],\n          imgSrc: [\"'self'\", 'data:'],\n          connectSrc: [\"'self'\"],\n          frameSrc: [\"'none'\"],\n          objectSrc: [\"'none'\"],\n          upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,\n          baseUri: [\"'self'\"],\n          formAction: [\"'self'\"],\n          frameAncestors: [\"'self'\"],\n          scriptSrcAttr: [\"'none'\"],\n        },\n      },\n      crossOriginEmbedderPolicy: false, // Required for Design System components\n      crossOriginResourcePolicy: { policy: 'cross-origin' },\n    })\n  )",
+            "explanation": "While 'unsafe-inline' cannot be fully removed until Design System components support nonce-based CSP, several improvements are made: (1) imgSrc is tightened from 'https:' (any HTTPS source) to 'self' data: to prevent image-based data exfiltration; (2) explicit CDN origins are added for unpkg.com and use.typekit.net so the CSP allowlists only known CDNs; (3) baseUri, formAction, frameAncestors, and scriptSrcAttr directives are explicitly set for defense-in-depth. The TODO comments document the path to a nonce-based CSP once the dependency allows it."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "negative",
+            "description": "Verify CSP header tightened — imgSrc no longer allows all HTTPS",
+            "command": "curl -s -I \"${BASE_URL}/api/v1/health\" | grep -i content-security-policy",
+            "expected_result": "img-src 'self' data: (NOT 'https:'). script-src includes https://unpkg.com. style-src includes https://use.typekit.net"
+          },
+          {
+            "step": 2,
+            "type": "positive",
+            "description": "Verify Design System components still render correctly in the frontend",
+            "command": "Open ${BASE_URL} in browser and inspect console for CSP violations",
+            "expected_result": "No CSP violation errors in browser console; Design System components render normally"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Chain 4: Supply Chain Attack (tightens imgSrc to prevent data exfiltration via image tags)"],
+          "functional_impact": "Design System components continue to work (unsafe-inline retained). Images must be self-hosted or data URIs.",
+          "rollback_risk": "low",
+          "dependencies": ["REM-14"]
+        }
+      },
+      {
+        "rem_id": "REM-14",
+        "title": "Missing Subresource Integrity (SRI) on Third-Party Resources",
+        "severity": "MEDIUM",
+        "related_poc_ids": ["PoC-14"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The production index.html at apps/web/index.html lines 10, 13, and 14 loads third-party JavaScript (Ionicons 5.5.2 from unpkg.com) and CSS (Adobe Typekit from use.typekit.net) without integrity attributes. If either CDN is compromised, arbitrary code or styles can execute in the application context.",
+        "affected_files": [
+          {
+            "file_path": "apps/web/index.html",
+            "lines": "10, 13, 14",
+            "role": "source"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/web/index.html",
+            "line_start": 9,
+            "line_end": 14,
+            "language": "html",
+            "current_code": "    <!-- Adobe Fonts - Acumin Pro SemiCondensed (Official Font) -->\n    <link rel=\"stylesheet\" href=\"https://use.typekit.net/kpe4dke.css\">\n\n    <!-- Ionicons - Required by Design System components -->\n    <script type=\"module\" src=\"https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js\"></script>\n    <script nomodule src=\"https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js\"></script>",
+            "replacement_code": "    <!-- Adobe Fonts - Acumin Pro SemiCondensed (Official Font) -->\n    <!-- NOTE: Typekit CSS is dynamically generated per-request and cannot use SRI. -->\n    <!-- Consider self-hosting the font files for full integrity control. -->\n    <link rel=\"stylesheet\" href=\"https://use.typekit.net/kpe4dke.css\" crossorigin=\"anonymous\">\n\n    <!-- Ionicons - Required by Design System components -->\n    <!-- SRI hashes generated for ionicons@5.5.2. Regenerate if version changes. -->\n    <!-- To generate: curl -s https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js | openssl dgst -sha384 -binary | openssl base64 -A -->\n    <script type=\"module\" src=\"https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js\"\n            integrity=\"sha384-PLACEHOLDER_GENERATE_BEFORE_DEPLOY\"\n            crossorigin=\"anonymous\"></script>\n    <script nomodule src=\"https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js\"\n            integrity=\"sha384-PLACEHOLDER_GENERATE_BEFORE_DEPLOY\"\n            crossorigin=\"anonymous\"></script>",
+            "explanation": "Adding integrity attributes with SHA-384 hashes ensures the browser verifies that the fetched resource matches the expected content. If a CDN is compromised, the browser will refuse to execute the tampered resource. The crossorigin='anonymous' attribute is required for SRI to work on cross-origin resources. IMPORTANT: The placeholder hashes must be replaced with actual SHA-384 hashes generated from the current CDN content before deployment. For Typekit CSS, SRI is not feasible because the content is dynamically generated per-request; the recommendation is to consider self-hosting the font files for full integrity control."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "positive",
+            "description": "Verify SRI is present in production HTML",
+            "command": "curl -s \"${BASE_URL}/\" | grep -E \"integrity=\"",
+            "expected_result": "Two script tags with integrity=\"sha384-...\" attributes"
+          },
+          {
+            "step": 2,
+            "type": "positive",
+            "description": "Verify scripts still load with correct hashes (no console errors)",
+            "command": "Open ${BASE_URL} in browser and check developer tools console",
+            "expected_result": "No SRI-related errors; Ionicons icons render correctly"
+          },
+          {
+            "step": 3,
+            "type": "negative",
+            "description": "Test tamper detection by temporarily modifying the hash",
+            "command": "Modify one character in the integrity hash and reload the page",
+            "expected_result": "Browser refuses to load the script; console shows SRI mismatch error"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Chain 4: Supply Chain Attack — compromised CDN content will be rejected by browsers"],
+          "functional_impact": "None if hashes are correct. If Ionicons is updated, new hashes must be generated.",
+          "rollback_risk": "low",
+          "dependencies": ["REM-12"]
+        }
+      },
+      {
+        "rem_id": "REM-04",
+        "title": "CSRF Token Endpoint Lacks Rate Limiting",
+        "severity": "MEDIUM",
+        "related_poc_ids": ["PoC-04"],
+        "quick_win": false,
+        "verified": true,
+        "root_cause": "The /api/v1/csrf-token endpoint at apps/api/src/app.ts line 124 is registered directly on the app without any dedicated rate limiting. While it falls under the general rate limiter (100/15min), each request creates server-side session state (CSRF secret stored via ensureCsrfSecret at csrf.middleware.ts line 17), and the endpoint returns two different CSRF tokens per request (one in the header from middleware, one in the body from the handler). This allows bulk token harvesting and potential session store exhaustion.",
+        "affected_files": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "lines": "124",
+            "role": "config"
+          },
+          {
+            "file_path": "apps/api/src/middleware/csrf.middleware.ts",
+            "lines": "81-91",
+            "role": "source"
+          }
+        ],
+        "recommended_changes": [
+          {
+            "file_path": "apps/api/src/app.ts",
+            "line_start": 124,
+            "line_end": 124,
+            "language": "typescript",
+            "current_code": "  // CSRF token endpoint\n  app.get('/api/v1/csrf-token', csrfTokenEndpoint)",
+            "replacement_code": "  // CSRF token endpoint - rate limited to prevent token harvesting and session store exhaustion\n  app.get('/api/v1/csrf-token', authRateLimiter, csrfTokenEndpoint)",
+            "explanation": "Applying the authRateLimiter (5 requests per 15 minutes) to the CSRF token endpoint prevents bulk token harvesting. Legitimate clients only need one CSRF token per session and refresh it infrequently. The auth-level rate limit (5/15min) is appropriate because the CSRF token is typically fetched once before making state-changing requests, not repeatedly."
+          },
+          {
+            "file_path": "apps/api/src/app.ts",
+            "line_start": 9,
+            "line_end": 9,
+            "language": "typescript",
+            "current_code": "import { generalRateLimiter, createCustomRateLimiter } from './middleware/rate-limit.middleware.js'",
+            "replacement_code": "import { generalRateLimiter, createCustomRateLimiter, authRateLimiter } from './middleware/rate-limit.middleware.js'",
+            "explanation": "Import the authRateLimiter from the rate-limit middleware so it can be applied to the CSRF token endpoint."
+          }
+        ],
+        "verification_steps": [
+          {
+            "step": 1,
+            "type": "negative",
+            "description": "Verify CSRF token endpoint respects stricter rate limit",
+            "command": "for i in $(seq 1 6); do curl -s -o /dev/null -w \"%{http_code}\" \"${BASE_URL}/api/v1/csrf-token\"; echo \"\"; done",
+            "expected_result": "First 5 return 200, 6th returns 429"
+          },
+          {
+            "step": 2,
+            "type": "positive",
+            "description": "Verify rate limit headers show auth-level limit",
+            "command": "curl -s -i \"${BASE_URL}/api/v1/csrf-token\" | grep -i ratelimit",
+            "expected_result": "ratelimit-limit: 5"
+          }
+        ],
+        "impact_assessment": {
+          "attack_chains_broken": ["Reduces effectiveness of CSRF token harvesting", "Limits session store exhaustion"],
+          "functional_impact": "Frontend must cache the CSRF token and reuse it rather than fetching a new one per request. Standard SPA behavior already does this.",
+          "rollback_risk": "low",
+          "dependencies": []
+        }
+      }
+    ],
+    "environment_variable_fixes": {
+      "rem_id": "REM-BONUS",
+      "title": "Environment Variable Configuration (Deployment Fix)",
+      "severity": "HIGH",
+      "description": "Multiple development default values have leaked to production because the corresponding environment variables are not set in the Render deployment configuration. This is the 'configuration cascade' identified in the PoC report.",
+      "required_variables": [
+        {
+          "variable": "AUTH_DRIVER",
+          "current_default": "mock",
+          "required_value": "saml or entra-id",
+          "related_rem_ids": ["REM-05"]
+        },
+        {
+          "variable": "CORS_ORIGIN",
+          "current_default": "http://localhost:5173",
+          "required_value": "https://your-app.onrender.com",
+          "related_rem_ids": ["REM-10"]
+        },
+        {
+          "variable": "WEB_URL",
+          "current_default": "http://localhost:5173",
+          "required_value": "https://your-app.onrender.com",
+          "related_rem_ids": ["REM-15"]
+        },
+        {
+          "variable": "SESSION_STORE",
+          "current_default": "memory",
+          "required_value": "postgres",
+          "related_rem_ids": []
+        },
+        {
+          "variable": "SESSION_SECRET",
+          "current_default": "dev-secret-change-in-production",
+          "required_value": "A cryptographically random string of at least 64 characters",
+          "generation_command": "node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\"",
+          "related_rem_ids": []
+        },
+        {
+          "variable": "NODE_ENV",
+          "current_default": "production (verify)",
+          "required_value": "production",
+          "related_rem_ids": ["REM-05", "REM-13"]
+        }
+      ]
+    },
+    "attack_chain_coverage_matrix": [
+      {
+        "attack_chain": "Chain 1: Mock Auth Admin Bypass (PoC-03 -> PoC-05 -> PoC-06 -> PoC-07/08)",
+        "broken_by": ["REM-05", "REM-13", "REM-07", "REM-01"],
+        "fully_mitigated": true,
+        "gaps": null
+      },
+      {
+        "attack_chain": "Chain 2: Information Disclosure Reconnaissance (PoC-01 -> PoC-02 -> PoC-03)",
+        "broken_by": ["REM-01"],
+        "fully_mitigated": true,
+        "gaps": null
+      },
+      {
+        "attack_chain": "Chain 3: Cross-Origin Session Theft (PoC-10 -> PoC-04 -> PoC-09 or PoC-06)",
+        "broken_by": ["REM-10", "REM-04", "REM-07"],
+        "fully_mitigated": true,
+        "gaps": null
+      },
+      {
+        "attack_chain": "Chain 4: Supply Chain Attack (PoC-14 -> PoC-12 -> exfiltration)",
+        "broken_by": ["REM-14", "REM-12"],
+        "fully_mitigated": false,
+        "gaps": "unsafe-inline in CSP cannot be fully removed until Design System components support nonce-based CSP. Current mitigations (tightened imgSrc, explicit CDN allowlist, SRI) significantly raise the attack bar but do not fully eliminate inline script injection risk."
+      }
+    ]
+  }
+}

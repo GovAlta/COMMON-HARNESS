@@ -1,0 +1,8 @@
+# CODEOWNERS for risk-acceptance-testapp
+# NOTE: .ai/blueteam/data/risk_acceptances.json is intentionally NOT listed here.
+# This simulates the "Self-service" governance path (no CODEOWNERS protection
+# on the risk register). TC-12 verifies the "Self-service" badge is rendered.
+
+*.ts @dev-team
+*.vue @dev-team
+src/ @dev-team

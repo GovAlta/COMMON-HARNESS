@@ -1,0 +1,75 @@
+skill_version: "unknown"
+last_validated: "2026-03-05"
+fixture: basic_webapp
+description: "Cybersecurity Architecture Standards compliance assessment"
+
+assertions:
+  - id: CAS-OUT-01
+    category: STABLE
+    description: "CAS report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/cas_compliance.md"
+
+  - id: CAS-OUT-02
+    category: STABLE
+    description: "code_changes.json present"
+    type: file_exists
+    path: ".ai/blueteam/data/code_changes.json"
+
+  - id: CAS-OUT-03
+    category: STABLE
+    description: "verification_tests.json present"
+    type: file_exists
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  - id: CAS-OUT-04
+    category: STABLE
+    description: "verification_tests.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  - id: CAS-RPT-01
+    category: STRUCTURAL
+    description: "Report has Kill Chain section"
+    type: section_present
+    path: ".ai/blueteam/reports/cas_compliance.md"
+    pattern: "Kill Chain"
+
+  - id: CAS-BEH-01
+    category: BEHAVIORAL
+    description: "CORS wildcard finding"
+    type: text_present
+    path: ".ai/blueteam/reports/cas_compliance.md"
+    patterns: ["CORS"]
+
+  - id: CAS-BEH-02
+    category: BEHAVIORAL
+    description: "Hardcoded credential finding"
+    type: text_present
+    path: ".ai/blueteam/reports/cas_compliance.md"
+    patterns: ["secret"]
+    case_insensitive: true
+
+  - id: CAS-BEH-03
+    category: BEHAVIORAL
+    description: "Missing rate limiting finding"
+    type: text_present
+    path: ".ai/blueteam/reports/cas_compliance.md"
+    patterns: ["rate limit"]
+    case_insensitive: true
+
+  - id: CAS-BEH-04
+    category: BEHAVIORAL
+    description: "Missing security headers finding"
+    type: text_present
+    path: ".ai/blueteam/reports/cas_compliance.md"
+    patterns: ["content-security-policy"]
+    case_insensitive: true
+
+  - id: CAS-BEH-05
+    category: BEHAVIORAL
+    description: "PII logging finding"
+    type: text_present
+    path: ".ai/blueteam/reports/cas_compliance.md"
+    patterns: ["pii"]
+    case_insensitive: true

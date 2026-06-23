@@ -1,0 +1,46 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/skills/sync-docs/check-docs-sync.mjs --migrations-only 2>&1 | grep -E '\\[migrations|\\[version' || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/skills/sync-docs/check-docs-sync.mjs 2>&1 | tail -40"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/validate-active-steps.mjs --quiet 2>&1 | tail -30"
+          },
+          {
+            "type": "command",
+            "command": "STEP=$(node .claude/scripts/detect-active-step.mjs 2>/dev/null); [ -n \"$STEP\" ] && node .claude/scripts/check-step-gates.mjs \"$STEP\" 2>&1 | tail -25 || true"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/check-security-gate.mjs 2>&1"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/check-harness-sync.mjs 2>&1"
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/check-finding-codified.mjs 2>&1"
+          }
+        ]
+      }
+    ]
+  }
+}

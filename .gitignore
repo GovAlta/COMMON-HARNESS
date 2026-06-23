@@ -1,0 +1,60 @@
+# --- Environment files (never commit real secrets) ---
+.env
+.env.local
+.env.*.local
+
+# --- Dependencies ---
+node_modules/
+
+# --- Scaffolded app (per-project; harness ships only template/) ---
+app/
+
+# --- Build output ---
+dist/
+build/
+# /build is a real harness skill; the unscoped 'build/' above silently
+# matches .claude/skills/build/ — negate it so the slash command stays tracked.
+!.claude/skills/build/
+!.claude/skills/build/**
+*.tsbuildinfo
+
+# --- Test + scan output ---
+coverage/
+.lighthouseci/
+.ai/
+.nyc_output/
+
+# --- Secrets / keys (defense-in-depth — even outside server/keys/) ---
+*.pem
+*.key
+*.p12
+*.pfx
+keys/
+
+# --- Logs ---
+*.log
+npm-debug.log*
+
+# --- Compiled binaries (defense-in-depth; covers Go builds + accidental drops) ---
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# --- Harness state (per-session; not for distribution) ---
+.claude/state/
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+
+# --- Security assessment outputs (project-specific; not framework code) ---
+.claude/security/*/deliverables/

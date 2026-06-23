@@ -1,0 +1,172 @@
+skill_version: "1.0.0"
+last_validated: "2026-03-09"
+fixture: basic_webapp
+description: >
+  ASVS-Compliant Builder skill — code generation skill.
+  Builder skills do not produce .ai/ data artifacts; they generate source code
+  into the target repository. Testing strategy: STABLE assertions verify the
+  skill file exists and is well-formed. Functional correctness is verified by
+  manual invocation and code review against the basic_webapp fixture.
+
+assertions:
+  # --- STABLE: Skill file presence and structure ---
+
+  - id: ASVS-BLD-STB-01
+    category: STABLE
+    description: "skills/14-asvs-compliant-builder.md exists"
+    type: file_exists
+    path: "../skills/14-asvs-compliant-builder.md"
+
+  - id: ASVS-BLD-STB-02
+    category: STABLE
+    description: "Builder skill contains Chapter Selection Guide"
+    type: text_present
+    path: "../skills/14-asvs-compliant-builder.md"
+    patterns:
+      - "Chapter Selection Guide"
+
+  - id: ASVS-BLD-STB-03
+    category: STABLE
+    description: "Builder skill documents excluded patterns"
+    type: text_present
+    path: "../skills/14-asvs-compliant-builder.md"
+    patterns:
+      - "Excluded Patterns"
+
+  - id: ASVS-BLD-STB-04
+    category: STABLE
+    description: "All 14 chapter files referenced in builder skill"
+    type: text_present
+    path: "../skills/14-asvs-compliant-builder.md"
+    patterns:
+      - "asvs_v1_architecture_skill.md"
+      - "asvs_v7_error_handling_skill.md"
+      - "asvs_v14_configuration_skill.md"
+
+  - id: ASVS-BLD-STB-05
+    category: STABLE
+    description: "Builder skill references environment-baseline.md"
+    type: text_present
+    path: "../skills/14-asvs-compliant-builder.md"
+    patterns:
+      - "shared/reference/environment-baseline.md"
+
+  # --- STRUCTURAL: Secure Implementation Guides present in all chapters ---
+
+  - id: ASVS-BLD-STR-01
+    category: STRUCTURAL
+    description: "V1 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v1_architecture_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-02
+    category: STRUCTURAL
+    description: "V2 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v2_authentication_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-03
+    category: STRUCTURAL
+    description: "V3 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v3_session_management_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-04
+    category: STRUCTURAL
+    description: "V4 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v4_access_control_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-05
+    category: STRUCTURAL
+    description: "V5 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v5_input_validation_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-06
+    category: STRUCTURAL
+    description: "V6 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v6_cryptography_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-07
+    category: STRUCTURAL
+    description: "V7 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v7_error_handling_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-08
+    category: STRUCTURAL
+    description: "V8 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v8_data_protection_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-09
+    category: STRUCTURAL
+    description: "V9 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v9_communication_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-10
+    category: STRUCTURAL
+    description: "V10 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v10_malicious_code_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-11
+    category: STRUCTURAL
+    description: "V11 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v11_business_logic_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-12
+    category: STRUCTURAL
+    description: "V12 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v12_files_resources_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-13
+    category: STRUCTURAL
+    description: "V13 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v13_api_security_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+  - id: ASVS-BLD-STR-14
+    category: STRUCTURAL
+    description: "V14 chapter has Secure Implementation Guide"
+    type: text_present
+    path: "../asvs_chapters/asvs_v14_configuration_skill.md"
+    patterns:
+      - "## Secure Implementation Guide"
+
+# NOTE: No BEHAVIORAL assertions for builder skills.
+# Behavioral correctness (does the generated code satisfy ASVS?) is verified
+# by manual invocation in a Claude session targeting the basic_webapp fixture,
+# followed by running the asvs_level2_assessment_skill against the generated code.
+# Add BEHAVIORAL assertions here when automated invocation is available (see MAINTENANCE.md TODO b).

@@ -1,0 +1,35 @@
+{
+  "name": "redteam-security",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "RedTeam offensive security assessment pipeline, tools, and evaluation framework",
+  "scripts": {
+    "pipeline": "node pipeline/claude_sdk.js",
+    "eval": "node eval_framework/cli.js",
+    "report:recon": "node scripts/recon_json_to_html.js",
+    "report:code-analysis": "node scripts/code_analysis_json_to_html.js",
+    "report:poc": "node scripts/poc_json_to_html.js",
+    "report:remediation": "node scripts/remediation_json_to_html.js",
+    "scan:nmap": "node scripts/nmap_scan.js",
+    "scan:whatweb": "node scripts/whatweb_scan.js",
+    "scan:zap": "node scripts/zap_scan.js",
+    "scan:zap-parse": "node scripts/zap_parse.js",
+    "scan:semgrep": "node scripts/semgrep_scan.js",
+    "scan:trufflehog": "node scripts/trufflehog_scan.js",
+    "scan:osv": "node scripts/osv_scan.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.141",
+    "cheerio": "^1.0.0",
+    "whois-json": "^2.0.4"
+  },
+  "overrides": {
+    "@anthropic-ai/sdk": "^0.92.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/claude-agent-sdk-win32-x64": "*"
+  }
+}

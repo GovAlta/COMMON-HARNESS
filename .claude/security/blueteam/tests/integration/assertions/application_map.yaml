@@ -1,0 +1,99 @@
+skill_version: "unknown"
+last_validated: "2026-03-05"
+fixture: basic_webapp
+description: "Application Map skill — discovery and artifact creation"
+
+assertions:
+  - id: APPMAP-OUT-01
+    category: STABLE
+    description: "application_map.json created"
+    type: file_exists
+    path: ".ai/blueteam/data/application_map.json"
+
+  - id: APPMAP-OUT-02
+    category: STABLE
+    description: "application_map.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/application_map.json"
+
+  - id: APPMAP-OUT-03
+    category: STABLE
+    description: "application_map.json has generated_at_commit field"
+    type: json_field_exists
+    path: ".ai/blueteam/data/application_map.json"
+    field: "generated_at_commit"
+
+  - id: APPMAP-OUT-04
+    category: STABLE
+    description: "endpoints array present"
+    type: json_field_exists
+    path: ".ai/blueteam/data/application_map.json"
+    field: "endpoints"
+
+  - id: APPMAP-OUT-05
+    category: BEHAVIORAL
+    description: "At least 5 endpoints discovered (login, employees, admin, search, export, reports)"
+    type: json_count_min
+    path: ".ai/blueteam/data/application_map.json"
+    field: "endpoints"
+    min: 5
+
+  - id: APPMAP-OUT-06
+    category: BEHAVIORAL
+    description: "Hardcoded JWT secret discovered in secrets_findings"
+    type: text_present
+    path: ".ai/blueteam/data/application_map.json"
+    patterns: ["JWT_SECRET", "dir-secret"]
+
+  - id: APPMAP-RPT-01
+    category: STRUCTURAL
+    description: "Application map report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/application_map.md"
+
+  - id: APPMAP-RPT-02
+    category: STRUCTURAL
+    description: "Report has Tech Stack section"
+    type: section_present
+    path: ".ai/blueteam/reports/application_map.md"
+    pattern: "Tech Stack"
+
+  - id: APPMAP-RPT-03
+    category: STRUCTURAL
+    description: "Report has Entry Points section"
+    type: section_present
+    path: ".ai/blueteam/reports/application_map.md"
+    pattern: "Entry Point"
+
+  - id: APPMAP-OUT-07
+    category: STABLE
+    description: "app_topology.json created alongside application_map.json"
+    type: file_exists
+    path: ".ai/blueteam/data/app_topology.json"
+
+  - id: APPMAP-STR-01
+    category: STABLE
+    description: "app_topology.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/app_topology.json"
+
+  - id: APPMAP-STR-02
+    category: STABLE
+    description: "app_topology.json has a zones array"
+    type: json_field_exists
+    path: ".ai/blueteam/data/app_topology.json"
+    field: "zones"
+
+  - id: APPMAP-STR-03
+    category: STABLE
+    description: "app_topology.json zone objects include required fill field (required by generate_overview_html.py)"
+    type: text_present
+    path: ".ai/blueteam/data/app_topology.json"
+    patterns: ["\"fill\""]
+
+  - id: APPMAP-STR-04
+    category: STABLE
+    description: "app_topology.json zone objects include required label_color field"
+    type: text_present
+    path: ".ai/blueteam/data/app_topology.json"
+    patterns: ["\"label_color\""]

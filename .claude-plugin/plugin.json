@@ -1,0 +1,22 @@
+{
+  "name": "claude-build-harness",
+  "version": "2.0.0",
+  "description": "Claude Build Harness — 8-phase lifecycle SDLC + build framework + 4 review frameworks (blueteam defensive, redteam offensive, greenteam code-review, yellowteam AI-smell)",
+  "author": {
+    "name": "Claude Build Harness contributors",
+    "url": ""
+  },
+  "license": "CC0-1.0",
+  "keywords": [
+    "sdlc",
+    "lifecycle",
+    "vue",
+    "express",
+    "enterprise",
+    "owasp-asvs",
+    "wcag",
+    "pwa",
+    "code-review",
+    "security-review"
+  ]
+}

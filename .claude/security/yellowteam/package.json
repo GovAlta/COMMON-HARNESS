@@ -1,0 +1,13 @@
+{
+  "name": "yellowteam-ai-smell-review",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Yellow team AI-smell deterministic review — multi-pattern style audit against the 12 hard rules from writing-style-guide.md (no Not-X-but-Y, no em dashes, no rhetorical tetracolons, no cinematic short sentences, no rhetorical anchors, banned vocabulary, no rule-of-three flourishes, no participial tails, no ensure-hedge, no vague intensifiers, no decorations/emojis, no AI smell). Produces an AI Smells Report (JSON + MD + HTML) per target.",
+  "scripts": {
+    "scan": "node pipeline/run_all.js",
+    "report:html": "node scripts/report_generator.js --html",
+    "report:md": "node scripts/report_generator.js --md",
+    "validate": "node scripts/validate_report.js"
+  },
+  "engines": { "node": ">=20.0.0" }
+}

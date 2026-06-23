@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "risk_register.schema.json",
+  "title": "risk_acceptances.json",
+  "description": "Schema for .ai/blueteam/data/risk_acceptances.json — application-team-authored risk acceptance register. Skills read this file; they do not write it.",
+  "type": "object",
+  "required": ["schema_version", "last_updated", "acceptances"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version string, e.g. \"1.0\""
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "ISO 8601 date of last update (YYYY-MM-DD)"
+    },
+    "acceptances": {
+      "type": "array",
+      "description": "Risk acceptance records; IDs are never reused or renumbered",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "finding_reference",
+          "scope",
+          "risk_description",
+          "business_justification",
+          "compensating_controls",
+          "severity_at_acceptance",
+          "accepted_by",
+          "accepted_by_role",
+          "acceptance_date",
+          "review_date",
+          "status"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^RA-\\d+$",
+            "description": "Sequential identifier: RA-001, RA-002, etc. Never reused or renumbered."
+          },
+          "finding_reference": {
+            "type": "object",
+            "description": "Reference to the specific finding being accepted",
+            "required": ["assessment", "finding_id"],
+            "additionalProperties": true,
+            "properties": {
+              "assessment": {
+                "type": "string",
+                "description": "The skill that produced the finding: threat_model | asvs_level2_security_assessment | cybersecurity_architecture_standard_compliance | dr_resilience_analysis | cybersecurity_tool_use"
+              },
+              "finding_id": {
+                "type": "string",
+                "description": "The specific finding ID from the assessment report, e.g. T-001, FINDING-003, CAS-RULE-ID"
+              },
+              "tool": {
+                "type": ["string", "null"],
+                "description": "Required for tool-scan findings: trivy | trufflehog | osv-scanner; null for assessment findings"
+              },
+              "package": {
+                "type": ["string", "null"],
+                "description": "Required for CVE/dependency findings; null otherwise"
+              },
+              "package_version": {
+                "type": ["string", "null"],
+                "description": "Required for CVE/dependency findings; null otherwise"
+              },
+              "cas_rule": {
+                "type": ["string", "null"],
+                "description": "CAS rule ID if applicable; null otherwise"
+              },
+              "asvs_requirement": {
+                "type": ["string", "null"],
+                "description": "ASVS requirement ID if applicable; null otherwise"
+              }
+            }
+          },
+          "scope": {
+            "type": "object",
+            "description": "Location of the inline risk acceptance marker in source code",
+            "required": ["file_path"],
+            "additionalProperties": true,
+            "properties": {
+              "file_path": {
+                "type": "string",
+                "description": "Repo-relative path (forward slashes) of the file with the inline marker"
+              },
+              "line_reference": {
+                "type": ["string", "integer", "null"],
+                "description": "Line number or range; null only for whole-package CVE acceptances"
+              }
+            }
+          },
+          "risk_description": {
+            "type": "string",
+            "description": "One sentence describing the specific risk being accepted; specific enough for a new developer"
+          },
+          "business_justification": {
+            "type": "string",
+            "description": "Why remediation is not feasible or appropriate at this time"
+          },
+          "compensating_controls": {
+            "type": "array",
+            "description": "At least one real compensating control; empty array is not valid",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "severity_at_acceptance": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Severity of the finding at acceptance time; cannot be retroactively lowered"
+          },
+          "accepted_by": {
+            "type": "string",
+            "description": "Full name of the person accepting the risk"
+          },
+          "accepted_by_role": {
+            "type": "string",
+            "description": "Job title or role of the accepting person"
+          },
+          "acceptance_date": {
+            "type": "string",
+            "description": "ISO 8601 acceptance date (YYYY-MM-DD)"
+          },
+          "review_date": {
+            "type": "string",
+            "description": "ISO 8601 review due date; max 12 months for High, 6 months for Critical, 24 months for Medium/Low"
+          },
+          "pr_reference": {
+            "type": ["string", "null"],
+            "description": "PR number or URL; recommended for High/Critical"
+          },
+          "ghas_alert_id": {
+            "type": ["string", "null"],
+            "description": "GitHub Advanced Security alert ID for cross-referencing"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "active", "expired", "withdrawn"],
+            "description": "pending = awaiting approval (treated as active finding); active = formally accepted; expired = past review_date (treated as active finding); withdrawn = revoked"
+          }
+        }
+      }
+    }
+  }
+}

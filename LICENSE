@@ -1,0 +1,61 @@
+MIT License
+
+Copyright (c) 2025 Government of Alberta
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+ADDITIONAL LIABILITY DISCLAIMER FOR SECURITY-ASSESSMENT TOOLING
+================================================================================
+
+This repository bundles security-assessment frameworks (blueteam / redteam /
+greenteam / yellowteam) that automate scanning, threat modeling, exploit
+prototyping, and remediation suggestions. They are provided for the use of
+software teams reviewing their own systems with appropriate authorization.
+
+You assume full responsibility for:
+
+  1. Lawful, authorized use. Running offensive components (redteam, exploit
+     prototypes, recon tooling) against systems you do not own or do not have
+     explicit written authorization to test is illegal in many jurisdictions.
+     The authors of this harness bear no responsibility for misuse.
+
+  2. Correctness of findings and fixes. The harness combines AI-driven and
+     deterministic analysis. Both can produce false positives, miss real
+     issues, propose fixes that introduce new vulnerabilities, or generate
+     code that does not match your security policy. Every finding and every
+     proposed fix MUST be independently reviewed by a qualified human before
+     being acted on.
+
+  3. Operational outcomes. The harness may invoke external scanners and APIs
+     (semgrep, OSV, npm audit, secretlint, ZAP, LLM providers, etc.), modify
+     your repository (writing reports, generating code), or shell out to
+     subprocesses. Outages, data loss, regressions, or contractual / regulatory
+     exposure resulting from running this software are entirely the user's
+     responsibility.
+
+  4. Compliance and disclosure. Nothing in this software constitutes legal
+     advice, a compliance attestation (OWASP ASVS, CAS, PCI, HIPAA, FOIP,
+     etc.), or a binding security certification. Outputs are tooling artifacts
+     and must be reviewed in the context of your specific control framework.
+
+By using this software you acknowledge the above and agree that the authors,
+copyright holders, and contributors are not liable for any direct, indirect,
+incidental, consequential, special, punitive, or exemplary damages arising
+from its use.

@@ -1,0 +1,112 @@
+skill_version: "unknown"
+last_validated: "2026-03-07"
+fixture: basic_webapp
+description: "Kill Chain Aggregator — cross-domain chain analysis and security_requirements.md report"
+# NOTE: Requires threat_model, asvs, and cas outputs pre-existing in fixture.
+
+assertions:
+  - id: KC-OUT-01
+    category: STABLE
+    description: "Kill chains report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/cross_domain_kill_chains.md"
+
+  - id: KC-OUT-02
+    category: STABLE
+    description: "kill_chains.json created"
+    type: file_exists
+    path: ".ai/blueteam/data/kill_chains.json"
+
+  - id: KC-OUT-03
+    category: STABLE
+    description: "kill_chains.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/kill_chains.json"
+
+  - id: KC-OUT-04
+    category: STABLE
+    description: "chains array present in kill_chains.json"
+    type: json_field_exists
+    path: ".ai/blueteam/data/kill_chains.json"
+    field: "chains"
+
+  - id: KC-OUT-05
+    category: STABLE
+    description: "verification_tests.json present"
+    type: file_exists
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  - id: KC-OUT-06
+    category: STABLE
+    description: "verification_tests.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  - id: KC-ID-01
+    category: STABLE
+    description: "KC-NNN IDs in kill_chains.json"
+    type: json_field_regex
+    path: ".ai/blueteam/data/kill_chains.json"
+    field: "chains"
+    id_field: "id"
+    pattern: "^KC-\\d{3}$"
+
+  - id: KC-CNT-01
+    category: BEHAVIORAL
+    description: "At least 2 cross-domain chains identified"
+    type: json_count_min
+    path: ".ai/blueteam/data/kill_chains.json"
+    field: "chains"
+    min: 2
+
+  - id: KC-RPT-01
+    category: STRUCTURAL
+    description: "Report has cross-domain section"
+    type: section_present
+    path: ".ai/blueteam/reports/cross_domain_kill_chains.md"
+    pattern: "Cross-Domain"
+
+  - id: KC-BEH-01
+    category: BEHAVIORAL
+    description: "SQL injection chain present"
+    type: text_present
+    path: ".ai/blueteam/reports/cross_domain_kill_chains.md"
+    patterns: ["sql"]
+    case_insensitive: true
+
+  # ----- Security requirements report (Step 7 outputs) -----
+
+  - id: KC-OUT-07
+    category: STABLE
+    description: "security_requirements.md report created (Step 7 output)"
+    type: file_exists
+    path: ".ai/blueteam/reports/security_requirements.md"
+
+  - id: KC-OUT-08
+    category: STABLE
+    description: "security_requirements.html report created (Step 7 output)"
+    type: file_exists
+    path: ".ai/blueteam/reports/security_requirements.html"
+
+  - id: KC-REQ-01
+    category: STRUCTURAL
+    description: "security_requirements.md has Executive Summary section"
+    type: section_present
+    path: ".ai/blueteam/reports/security_requirements.md"
+    pattern: "Executive Summary"
+
+  - id: KC-REQ-02
+    category: STRUCTURAL
+    description: "security_requirements.md contains SR-NNN requirement IDs"
+    type: text_present
+    path: ".ai/blueteam/reports/security_requirements.md"
+    patterns: ["SR-"]
+    case_insensitive: false
+
+  - id: KC-REQ-03
+    category: BEHAVIORAL
+    description: "security_requirements.md contains at least one Critical priority entry"
+    type: text_present
+    path: ".ai/blueteam/reports/security_requirements.md"
+    patterns: ["Critical"]
+    case_insensitive: false

@@ -1,0 +1,38 @@
+{
+  "name": "greenteam-code-review",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Green team deterministic code review — multi-round static and dynamic analysis modeled on real human-led code reviews. Round 1 = static (npm audit, secrets, dangerous patterns, license, depcheck, madge, prettier, govulncheck, redocly, semgrep, gitignore, env defaults, compiled binaries, migration sequence). Round 2 = test execution (vue-tsc, eslint, vitest --coverage, go test -cover, integration enumeration, test-bypass audit, CI pipeline audit, console-log scan). Refinement pass re-frames findings with corrected tooling flags.",
+  "scripts": {
+    "scan": "node pipeline/run_all.js",
+    "scan:round1": "node pipeline/run_all.js --round 1",
+    "scan:round2": "node pipeline/run_all.js --round 2",
+    "report:html": "node scripts/report_generator.js --html",
+    "report:md": "node scripts/report_generator.js --md",
+    "validate": "node scripts/validate_report.js"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "license-checker": "^25.0.1",
+    "depcheck": "^1.4.7",
+    "madge": "^8.0.0",
+    "prettier": "^3.3.0",
+    "@redocly/cli": "^1.25.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint-plugin-security": "^3.0.0",
+    "eslint-plugin-no-unsanitized": "^4.0.0",
+    "secretlint": "^8.0.0",
+    "@secretlint/secretlint-rule-preset-recommend": "^8.0.0",
+    "@secretlint/secretlint-rule-aws": "^8.0.0",
+    "@secretlint/secretlint-rule-gcp": "^8.0.0",
+    "@secretlint/secretlint-rule-privatekey": "^8.0.0",
+    "vue-tsc": "^2.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "$comment": "Unified harness hooks. Copy the `hooks` block below into a child project's .claude/settings.json (merge with existing keys). Two layers of protection: (1) cheap PostToolUse drift check after each edit, (2) Stop hooks that BLOCK the conversation from ending until docs are in sync AND every phase output is structurally valid. To install in a child project: `cp .claude/harness-hooks.json <project>/.claude/settings.json` (or merge if there are other settings).",
+  "$installHelp": [
+    "Run from inside the harness root:",
+    "  cp .claude/harness-hooks.json /path/to/your-project/.claude/settings.json",
+    "Or merge manually into an existing settings.json — the `hooks` block is what matters.",
+    "The paths below assume the harness's .claude/ is cloned into the same project root (i.e., .claude/skills/sync-docs/check-docs-sync.mjs is resolvable from CWD)."
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/skills/sync-docs/check-docs-sync.mjs --migrations-only 2>&1 | grep -E '\\[migrations|\\[version' || true",
+            "$comment": "Cheap migration/version drift check after every Edit/Write. Surfaces immediately when a new migration is added but the README count is stale."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/skills/sync-docs/check-docs-sync.mjs 2>&1 | tail -40",
+            "$comment": "Full drift check across README ↔ openapi.yaml ↔ CLAUDE.md ↔ migrations ↔ routes. Non-zero exit blocks conversation stop until drift is resolved."
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/validate-active-steps.mjs --quiet 2>&1 | tail -30",
+            "$comment": "Lints every phases/phase?-*/output/*.md file against its skill's output-template. Non-zero exit blocks stop. No-ops cleanly when no phase outputs exist."
+          },
+          {
+            "type": "command",
+            "command": "STEP=$(node .claude/scripts/detect-active-step.mjs 2>/dev/null); [ -n \"$STEP\" ] && node .claude/scripts/check-step-gates.mjs \"$STEP\" 2>&1 | tail -25 || true",
+            "$comment": "Auto-detect the active phase and run its mandatory gate set (FR coverage + NFR coverage + sync-docs + idempotency + structure). Mechanical enforcement — every 'must do X' fires as a Stop-time gate. No-ops if no phase is in flight."
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/check-security-gate.mjs 2>&1",
+            "$comment": "Security gate: hard-blocks if blueteam scan result is missing, >24h stale, or has CRITICAL findings. Warns if redteam deliverable is absent."
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/check-finding-codified.mjs 2>&1",
+            "$comment": "Blocks if any CRITICAL/HIGH finding has no corresponding entry in 02-security.md. Every fixed finding must produce a harness rule so the same class of mistake can never recur."
+          }
+        ]
+      }
+    ]
+  }
+}

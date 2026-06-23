@@ -1,0 +1,8 @@
+# CODEOWNERS for Employee Directory
+# Security team reviews all TypeScript source changes
+*.ts @security-team
+.ai/blueteam/data/security-classification.yaml @security-team
+
+# Note: .ai/blueteam/data/risk_acceptances.json is NOT listed here.
+# This fixture has no risk acceptance register — the risk_acceptance_app
+# fixture handles that scenario separately.

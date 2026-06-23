@@ -1,0 +1,99 @@
+skill_version: "1.1.0"
+last_validated: "2026-03-09"
+fixture: basic_webapp
+description: >
+  Shared Security Preflight skill — structural assertions verifying that the
+  preflight contains the canonical RA loading procedure and that assessment
+  skills defer to it rather than repeating inline RA loading sections.
+
+assertions:
+  # --- STABLE: Preflight file structure ---
+
+  - id: PFL-STB-01
+    category: STABLE
+    description: "shared/skills/preflight.md exists"
+    type: file_exists
+    path: "../shared/skills/preflight.md"
+
+  - id: PFL-STB-02
+    category: STABLE
+    description: "Preflight contains Risk acceptance register loading step"
+    type: text_present
+    path: "../shared/skills/preflight.md"
+    patterns:
+      - "Risk acceptance register loading"
+
+  - id: PFL-STB-03
+    category: STABLE
+    description: "Preflight contains non-suppressible finding type list"
+    type: text_present
+    path: "../shared/skills/preflight.md"
+    patterns:
+      - "Non-suppressible finding types"
+
+  - id: PFL-STB-04
+    category: STABLE
+    description: "Preflight contains finding-level RA check procedure"
+    type: text_present
+    path: "../shared/skills/preflight.md"
+    patterns:
+      - "Finding-level RA check"
+
+  - id: PFL-STB-05
+    category: STABLE
+    description: "Preflight handles both absent and present RA register cases"
+    type: text_present
+    path: "../shared/skills/preflight.md"
+    patterns:
+      - "risk_acceptance_mode = disabled"
+      - "risk_acceptance_mode = enabled"
+
+  # --- STRUCTURAL: Assessment skills defer to preflight for RA ---
+
+  - id: PFL-STR-01
+    category: STRUCTURAL
+    description: "Threat model defers RA loading to preflight (no inline Risk Acceptance File Loading section)"
+    type: text_present
+    path: "../skills/04-threat-model.md"
+    patterns:
+      - "RA register loaded in preflight"
+
+  - id: PFL-STR-02
+    category: STRUCTURAL
+    description: "ASVS skill defers RA loading to preflight"
+    type: text_present
+    path: "../skills/05-asvs-level2-assessment.md"
+    patterns:
+      - "RA register loaded in preflight"
+
+  - id: PFL-STR-03
+    category: STRUCTURAL
+    description: "CAS skill defers RA loading to preflight"
+    type: text_present
+    path: "../skills/06-cas-compliance.md"
+    patterns:
+      - "RA register loaded in preflight"
+
+  - id: PFL-STR-04
+    category: STRUCTURAL
+    description: "DR resilience skill defers RA loading to preflight"
+    type: text_present
+    path: "../skills/10-dr-resilience.md"
+    patterns:
+      - "RA register loaded in preflight"
+
+  - id: PFL-STR-05
+    category: STRUCTURAL
+    description: "Preflight loads environment baseline"
+    type: text_present
+    path: "../shared/skills/preflight.md"
+    patterns:
+      - "shared/reference/environment-baseline.md"
+
+  - id: PFL-STR-06
+    category: STRUCTURAL
+    description: "Preflight loads controls yaml schema"
+    type: text_present
+    path: "../shared/skills/preflight.md"
+    patterns:
+      - "shared/controls_yaml_schema.md"

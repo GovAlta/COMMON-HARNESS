@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "verification_tests.schema.json",
+  "title": "BlueTeam verification tests",
+  "type": "object",
+  "required": ["schema_version", "tests"],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "last_updated": {
+      "type": "string"
+    },
+    "application_name": {
+      "type": "string"
+    },
+    "generated_by_assessments": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["finding_id", "assessment", "safety_level", "validation_status"],
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "pattern": "^(FINDING|CC|SR|KC|T|CAS|ASVS|DR|VULN|SECRET)-[0-9]{3}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "assessment": {
+            "type": "string"
+          },
+          "safety_level": {
+            "type": "string",
+            "enum": ["safe-readonly", "safe-authz", "destructive"]
+          },
+          "preconditions": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "command_template": {
+            "type": "string"
+          },
+          "expected_vulnerable_result": {
+            "type": "string"
+          },
+          "expected_mitigated_result": {
+            "type": "string"
+          },
+          "evidence_to_capture": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "validation_status": {
+            "type": "string",
+            "enum": ["not-tested", "passed", "failed", "not-applicable"]
+          },
+          "last_validated": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

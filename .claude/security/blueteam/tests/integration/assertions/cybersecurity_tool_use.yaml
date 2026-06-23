@@ -1,0 +1,61 @@
+skill_version: "1.0.0"
+last_validated: "2026-03-20"
+fixture: basic_webapp
+description: "Cybersecurity Tool Use skill — 4 scanners (Trivy, TruffleHog, OSV-Scanner, Semgrep optional)"
+
+assertions:
+  # STABLE: skill file structure
+  - id: CTU-STB-01
+    category: STABLE
+    description: "Skill file exists"
+    type: file_exists
+    path: "../../skills/08-tool-scanning.md"
+
+  - id: CTU-STB-02
+    category: STABLE
+    description: "Skill describes Semgrep as Scanner 4"
+    type: text_present
+    path: "../../skills/08-tool-scanning.md"
+    patterns: ["semgrep", "Semgrep"]
+    case_insensitive: false
+
+  - id: CTU-STB-03
+    category: STABLE
+    description: "Skill has graceful not_installed handling for Semgrep"
+    type: text_present
+    path: "../../skills/08-tool-scanning.md"
+    patterns: ["not_installed"]
+    case_insensitive: false
+
+  - id: CTU-STB-04
+    category: STABLE
+    description: "Skill uses sast as finding type"
+    type: text_present
+    path: "../../skills/08-tool-scanning.md"
+    patterns: ["\"sast\""]
+    case_insensitive: false
+
+  # STRUCTURAL: schema-level details
+  - id: CTU-STR-01
+    category: STRUCTURAL
+    description: "Skill documents Semgrep severity mapping (ERROR/WARNING/INFO)"
+    type: text_present
+    path: "../../skills/08-tool-scanning.md"
+    patterns: ["ERROR", "WARNING", "INFO"]
+    case_insensitive: false
+
+  - id: CTU-STR-02
+    category: STRUCTURAL
+    description: "Skill documents semgrep --config=auto command"
+    type: text_present
+    path: "../../skills/08-tool-scanning.md"
+    patterns: ["--config=auto"]
+    case_insensitive: false
+
+  - id: CTU-STR-03
+    category: STRUCTURAL
+    description: "Skill lists semgrep-results.json as raw output artifact"
+    type: text_present
+    path: "../../skills/08-tool-scanning.md"
+    patterns: ["semgrep-results.json"]
+    case_insensitive: false

@@ -1,0 +1,52 @@
+-- Migration: 020_optional_pgcrypto (OPT-IN — rename to .sql to enable)
+-- Description: Enable pgcrypto and add column-level encryption for the
+-- form_submission.submission_data JSONB column.
+--
+-- This migration ships with a .sql.example suffix so the standard migration
+-- runner does NOT pick it up by default. Teams whose deployment processes
+-- Protected B data MUST rename it to `020_optional_pgcrypto.sql` (drop the
+-- .example), generate an encryption key, and run `npm run db:migrate`.
+--
+-- Why opt-in:
+--   - Enabling pgcrypto + rewriting the read path means every read/write of
+--     submission_data takes a CPU-bound encrypt/decrypt step. For apps that
+--     never store Protected B data (public services catalogue, anonymous
+--     submissions) the cost is wasted.
+--   - The encryption key (`PGCRYPTO_DATA_KEY` env var below) must be managed
+--     through your secrets manager — committing this migration without that
+--     setup would result in NULL keys and unreadable submissions.
+--
+-- Once enabled:
+--   - Reads of `submission_data_encrypted` go through `pgp_sym_decrypt()`.
+--   - Writes of `submission_data` go through `pgp_sym_encrypt()`.
+--   - The submission.model.ts module reads `PGCRYPTO_DATA_KEY` from env on
+--     each call (so key rotation is a deploy + restart, not a code change).
+--
+-- This addresses the CAS ENC-002/ENC-003 Critical finding for Protected B
+-- data at rest. Database-level TDE alone is insufficient because it does not
+-- protect against a compromised app credential reading the column.
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Add the encrypted column. Old `submission_data` JSONB stays for backward
+-- compat; new writes populate ONLY `submission_data_encrypted`. A follow-up
+-- backfill migration (not provided here) is required to migrate existing
+-- data and then drop the plaintext column.
+ALTER TABLE form_submission
+  ADD COLUMN IF NOT EXISTS submission_data_encrypted BYTEA;
+
+-- Helper functions. Take key as parameter so the app passes it from env on
+-- every call (rather than baking it into the DB role).
+CREATE OR REPLACE FUNCTION enc_submission(plain JSONB, key TEXT)
+  RETURNS BYTEA LANGUAGE SQL IMMUTABLE AS $$
+  SELECT pgp_sym_encrypt(plain::TEXT, key);
+$$;
+
+CREATE OR REPLACE FUNCTION dec_submission(cipher BYTEA, key TEXT)
+  RETURNS JSONB LANGUAGE SQL IMMUTABLE AS $$
+  SELECT pgp_sym_decrypt(cipher, key)::JSONB;
+$$;
+
+-- Application-side: read via `dec_submission(submission_data_encrypted, $1)`
+-- and write via `enc_submission($1::jsonb, $2)` — see the worked example in
+-- docs/dr/protected-b-encryption.md.

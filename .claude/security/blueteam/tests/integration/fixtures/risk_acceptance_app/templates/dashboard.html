@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+</head>
+<body>
+  <h1>Analytics Dashboard</h1>
+  <!-- Dashboard panels below — served to internal staff via Enterprise IdP SSO only -->
+  <!-- Missing CSP header accepted (RA-011) pending Helmet integration in Sprint 14 -->
+  <!-- Compensating: Cloudflare WAF XSS filter; Enterprise IdP SSO gate (not internet-accessible) -->
+  <!-- RISK_ACCEPTED: RA-011 -->
+  <div id="user-stats" data-fetch="/api/admin/stats">
+    <!-- Stats injected by dashboard.js -->
+  </div>
+  <div id="report-list" data-fetch="/api/reports">
+    <!-- Reports injected by dashboard.js -->
+  </div>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

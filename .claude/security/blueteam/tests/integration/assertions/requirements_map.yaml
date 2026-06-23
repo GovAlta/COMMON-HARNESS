@@ -1,0 +1,94 @@
+skill_version: "1.0.0"
+last_validated: "2026-03-09"
+fixture: basic_webapp
+description: "Requirements Map skill — design-level system model extraction from requirements documents"
+
+assertions:
+  - id: REQMAP-OUT-01
+    category: STABLE
+    description: "application_map.json created"
+    type: file_exists
+    path: ".ai/blueteam/data/application_map.json"
+
+  - id: REQMAP-OUT-02
+    category: STABLE
+    description: "application_map.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/application_map.json"
+
+  - id: REQMAP-OUT-03
+    category: STABLE
+    description: "application_map.json has source field set to 'requirements'"
+    type: text_present
+    path: ".ai/blueteam/data/application_map.json"
+    patterns: ["\"source\"", "\"requirements\""]
+
+  - id: REQMAP-OUT-04
+    category: STABLE
+    description: "app_topology.json created alongside application_map.json"
+    type: file_exists
+    path: ".ai/blueteam/data/app_topology.json"
+
+  - id: REQMAP-OUT-05
+    category: STABLE
+    description: "app_topology.json zone objects include required fill and label_color fields"
+    type: text_present
+    path: ".ai/blueteam/data/app_topology.json"
+    patterns: ["\"fill\"", "\"label_color\""]
+
+  - id: REQMAP-RPT-01
+    category: STRUCTURAL
+    description: "Application map report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/application_map.md"
+
+  - id: REQMAP-RPT-02
+    category: STRUCTURAL
+    description: "Report has Tech Stack section"
+    type: section_present
+    path: ".ai/blueteam/reports/application_map.md"
+    pattern: "Tech Stack"
+
+  - id: REQMAP-RPT-03
+    category: STRUCTURAL
+    description: "Report has Entry Points section"
+    type: section_present
+    path: ".ai/blueteam/reports/application_map.md"
+    pattern: "Entry Point"
+
+  - id: REQMAP-RPT-04
+    category: STRUCTURAL
+    description: "Report has Identity or Actors section"
+    type: section_present
+    path: ".ai/blueteam/reports/application_map.md"
+    pattern: "Actor"
+
+  - id: REQMAP-RPT-05
+    category: STRUCTURAL
+    description: "Report has Security Gaps section"
+    type: section_present
+    path: ".ai/blueteam/reports/application_map.md"
+    pattern: "Security Gap"
+
+  - id: REQMAP-BEH-01
+    category: BEHAVIORAL
+    description: "At least 1 actor detected (staff or admin role)"
+    type: json_count_min
+    path: ".ai/blueteam/data/application_map.json"
+    field: "identity_providers"
+    min: 1
+
+  - id: REQMAP-BEH-02
+    category: BEHAVIORAL
+    description: "At least 1 conceptual endpoint/feature detected"
+    type: json_count_min
+    path: ".ai/blueteam/data/application_map.json"
+    field: "endpoints"
+    min: 1
+
+  - id: REQMAP-BEH-03
+    category: BEHAVIORAL
+    description: "pre_assumed_gaps array field present in application_map.json (may be empty)"
+    type: text_present
+    path: ".ai/blueteam/data/application_map.json"
+    patterns: ["\"pre_assumed_gaps\""]

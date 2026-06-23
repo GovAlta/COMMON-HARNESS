@@ -1,0 +1,100 @@
+# Dependabot configuration for the Claude Build Harness repository.
+#
+# Why this file exists:
+#   By default, Dependabot scans every package.json under the repo. That
+#   includes our blueteam regression fixtures
+#   (.claude/security/blueteam/tests/integration/fixtures/basic_webapp/ and
+#   .../risk_acceptance_app/), which are INTENTIONALLY pinned to vulnerable
+#   library versions so the blueteam security-scanner can detect them
+#   (see FIXTURE_MANIFEST.md entry F-PKG-01 for jsonwebtoken@8.5.1 +
+#   CVE-2022-23529). Bumping those versions would defeat the regression test.
+#
+#   Once an explicit `updates:` block is present, Dependabot only scans the
+#   directories listed here, so the fixture paths are excluded by omission.
+#
+# Scoped directories (the real harness code we DO want patched):
+#   - root (this repo's own scripts + tools dependencies, if any)
+#   - .claude/security/blueteam/   — defensive-assessment framework code
+#   - .claude/security/redteam/    — offensive-assessment framework code
+#   - template/public/             — root orchestration package (install:all etc.)
+#   - template/public/client/      — Vue 3 + PrimeVue frontend template
+#   - template/public/server/      — Express + TS backend template
+#
+# Intentionally NOT scanned (regression fixtures — vulnerabilities are by design):
+#   - .claude/security/blueteam/tests/integration/fixtures/basic_webapp/
+#   - .claude/security/blueteam/tests/integration/fixtures/risk_acceptance_app/
+#
+# Also not scanned by Dependabot directly:
+#   - ./app/   (gitignored — project-specific build output of /build skill)
+
+version: 2
+
+updates:
+  # Defensive (blueteam) security framework — the real code, not the fixtures.
+  - package-ecosystem: "npm"
+    directory: "/.claude/security/blueteam"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security/blueteam"
+
+  # Offensive (redteam) security framework.
+  - package-ecosystem: "npm"
+    directory: "/.claude/security/redteam"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security/redteam"
+
+  # Code-review (greenteam) framework.
+  - package-ecosystem: "npm"
+    directory: "/.claude/security/greenteam"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security/greenteam"
+
+  # Application template — root orchestration (install:all / dev:all / build).
+  - package-ecosystem: "npm"
+    directory: "/template/public"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "template/public"
+
+  # Application template — Vue 3 + PrimeVue frontend.
+  - package-ecosystem: "npm"
+    directory: "/template/public/client"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "template/public-client"
+
+  # Application template — Express + TS + Postgres backend.
+  - package-ecosystem: "npm"
+    directory: "/template/public/server"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "template/public-server"
+
+  # GitHub Actions workflows in this repo (if any are added later).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels:
+      - "ci"

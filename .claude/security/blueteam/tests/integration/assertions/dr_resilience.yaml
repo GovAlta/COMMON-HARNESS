@@ -1,0 +1,155 @@
+skill_version: "unknown"
+last_validated: "2026-03-07"
+fixture: basic_webapp
+description: "DR & Resilience Analysis skill — disaster recovery and business continuity assessment"
+# NOTE: Run skills/10-dr-resilience.md against the basic_webapp fixture before checking.
+# The basic_webapp fixture contains no DR infrastructure — expect a Critical score with multiple gaps.
+
+assertions:
+
+  # --- Output artifacts (STABLE) ---
+
+  - id: DR-OUT-01
+    category: STABLE
+    description: "dr_resilience_assessment.json created in .ai/blueteam/data/"
+    type: file_exists
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+
+  - id: DR-OUT-02
+    category: STABLE
+    description: "dr_resilience_assessment.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+
+  - id: DR-OUT-03
+    category: STABLE
+    description: "dr_resilience_assessment.md report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/dr_resilience_assessment.md"
+
+  - id: DR-OUT-04
+    category: STABLE
+    description: "dr_resilience_assessment.html report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/dr_resilience_assessment.html"
+
+  # --- Schema conformance (STABLE) ---
+  # These are the fields directly consumed by generate_overview_html.py.
+  # A missing key causes the corresponding DR tab section to silently render empty.
+
+  - id: DR-SCH-01
+    category: STABLE
+    description: "overall_score field present (drives score banding in overview DR tab)"
+    type: json_field_exists
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "overall_score"
+
+  - id: DR-SCH-02
+    category: STABLE
+    description: "dimensions array present (required for Dimension Scores bars in overview)"
+    type: json_field_exists
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "dimensions"
+
+  - id: DR-SCH-03
+    category: STABLE
+    description: "gaps array present (required for Potential Gaps table in overview)"
+    type: json_field_exists
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "gaps"
+
+  - id: DR-SCH-04
+    category: STABLE
+    description: "recommendations array present"
+    type: json_field_exists
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "recommendations"
+
+  - id: DR-SCH-05
+    category: STABLE
+    description: "assessment_name is 'dr_resilience_analysis' (required field, not a freeform label)"
+    type: text_present
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    patterns: ["dr_resilience_analysis"]
+    case_insensitive: false
+
+  # --- Structural checks (STRUCTURAL) ---
+
+  - id: DR-STR-01
+    category: STRUCTURAL
+    description: "dr_resilience_assessment.json validates required keys against schema"
+    type: json_schema
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    required_keys:
+      - schema_version
+      - overall_score
+      - overall_rating
+      - overall_risk
+      - dimensions
+      - gaps
+      - recommendations
+
+  - id: DR-STR-02
+    category: STRUCTURAL
+    description: "Exactly 5 scoring dimensions present (application_resilience, backup, recovery, infrastructure, documentation)"
+    type: json_count_min
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "dimensions"
+    min: 5
+
+  - id: DR-STR-03
+    category: STRUCTURAL
+    description: "Recommendation priorities use p-scale format (p0-p4), not text labels"
+    type: json_field_regex
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "recommendations"
+    id_field: "priority"
+    pattern: "^p[0-4]$"
+
+  - id: DR-STR-04
+    category: STRUCTURAL
+    description: "Report has Dimensions/Scoring section"
+    type: section_present
+    path: ".ai/blueteam/reports/dr_resilience_assessment.md"
+    pattern: "Dimension"
+
+  - id: DR-STR-05
+    category: STRUCTURAL
+    description: "Report has Gaps or Findings section"
+    type: section_present
+    path: ".ai/blueteam/reports/dr_resilience_assessment.md"
+    pattern: "Gap"
+
+  # --- Behavioral (BEHAVIORAL) ---
+
+  - id: DR-BEH-01
+    category: BEHAVIORAL
+    description: "At least one gap identified (basic_webapp has no DR infrastructure)"
+    type: json_count_min
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "gaps"
+    min: 1
+
+  - id: DR-BEH-02
+    category: BEHAVIORAL
+    description: "At least one recommendation provided"
+    type: json_count_min
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "recommendations"
+    min: 1
+
+  - id: DR-BEH-03
+    category: BEHAVIORAL
+    description: "Gap IDs follow DRG-NNN format"
+    type: json_field_regex
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "gaps"
+    id_field: "id"
+    pattern: "^DRG-\\d+"
+
+  - id: DR-BEH-04
+    category: BEHAVIORAL
+    description: "Score is in Critical range (0-29) — basic_webapp has no DR evidence"
+    type: json_field_exists
+    path: ".ai/blueteam/data/dr_resilience_assessment.json"
+    field: "overall_score"

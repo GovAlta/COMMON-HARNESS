@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "environment_assumptions.schema.json",
+  "title": "environment_assumptions.json",
+  "description": "Schema for .ai/blueteam/data/environment_assumptions.json — organizational environment baseline assumptions applied during assessment",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "last_updated",
+    "deployment_target",
+    "public_facing",
+    "baseline_version",
+    "assessments_applied",
+    "assumptions"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version string, e.g. \"1.0\""
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "ISO 8601 date of last write (YYYY-MM-DD)"
+    },
+    "deployment_target": {
+      "type": "string",
+      "enum": ["cloud_lz", "on_premises", "unknown"],
+      "description": "Inferred deployment target for this application"
+    },
+    "public_facing": {
+      "type": ["boolean", "null"],
+      "description": "True if the application is public-facing; null if unknown"
+    },
+    "baseline_version": {
+      "type": "string",
+      "description": "Version string of shared/reference/environment-baseline.md used during assessment"
+    },
+    "assessments_applied": {
+      "type": "array",
+      "description": "List of assessment names (without .md extension) that have written to this file",
+      "items": { "type": "string" }
+    },
+    "assumptions": {
+      "type": "array",
+      "description": "Environment baseline assumptions recorded during assessment",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Simple string assumption (minimal form)"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "control",
+              "asvs_requirements",
+              "assumed_state",
+              "basis",
+              "verdict_applied",
+              "validation_required",
+              "assessment_source",
+              "conflict_detected",
+              "conflict_detail"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^ASMP-\\d+$",
+                "description": "Sequential identifier: ASMP-001, ASMP-002, etc. Preserved across merges."
+              },
+              "control": {
+                "type": "string",
+                "description": "CAS rule ID (e.g. WAF-001) or empty string if ASVS-only"
+              },
+              "asvs_requirements": {
+                "type": "array",
+                "description": "ASVS requirement IDs covered by this assumption; empty array if CAS-only",
+                "items": { "type": "string" }
+              },
+              "assumed_state": {
+                "type": "string",
+                "const": "Compliant",
+                "description": "Always 'Compliant'"
+              },
+              "basis": {
+                "type": "string",
+                "description": "Why this assumption applies, citing shared/reference/environment-baseline.md"
+              },
+              "verdict_applied": {
+                "type": "string",
+                "description": "The verdict reported in the assessment, e.g. 'ASSUMED COMPLIANT (Environment Baseline)'"
+              },
+              "validation_required": {
+                "type": "string",
+                "description": "Specific action a human reviewer must take to confirm this assumption"
+              },
+              "assessment_source": {
+                "type": "string",
+                "description": "Assessment report that recorded this assumption"
+              },
+              "conflict_detected": {
+                "type": "boolean",
+                "description": "True if repository evidence conflicts with this assumption"
+              },
+              "conflict_detail": {
+                "type": ["string", "null"],
+                "description": "Description of conflict if conflict_detected is true; null otherwise"
+              },
+              "description": {
+                "type": "string",
+                "description": "Optional human-readable description of the assumption"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

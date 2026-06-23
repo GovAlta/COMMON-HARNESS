@@ -1,0 +1,158 @@
+skill_version: "1.0.0"
+last_validated: "2026-03-05"
+fixture: basic_webapp
+description: "ASVS Level 2 Assessment orchestrator — 14 chapters"
+
+assertions:
+  # Output artifacts
+  - id: ASVS-OUT-01
+    category: STABLE
+    description: "ASVS report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+
+  - id: ASVS-OUT-02
+    category: STABLE
+    description: "security_requirements.json created"
+    type: file_exists
+    path: ".ai/blueteam/data/security_requirements.json"
+
+  - id: ASVS-OUT-03
+    category: STABLE
+    description: "security_requirements.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/security_requirements.json"
+
+  - id: ASVS-OUT-04
+    category: STABLE
+    description: "code_changes.json present"
+    type: file_exists
+    path: ".ai/blueteam/data/code_changes.json"
+
+  - id: ASVS-OUT-05
+    category: STABLE
+    description: "verification_tests.json present"
+    type: file_exists
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  - id: ASVS-OUT-06
+    category: STABLE
+    description: "verification_tests.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  # SR-NNN IDs
+  - id: ASVS-ID-01
+    category: STABLE
+    description: "SR-NNN IDs in security_requirements.json"
+    type: json_field_regex
+    path: ".ai/blueteam/data/security_requirements.json"
+    field: "requirements"
+    id_field: "id"
+    pattern: "^SR-\\d{3}$"
+
+  - id: ASVS-ID-02
+    category: BEHAVIORAL
+    description: "At least 8 security requirements generated"
+    type: json_count_min
+    path: ".ai/blueteam/data/security_requirements.json"
+    field: "requirements"
+    min: 8
+
+  # Report structure
+  - id: ASVS-RPT-01
+    category: STRUCTURAL
+    description: "Report has Attack Chains section"
+    type: section_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    pattern: "Attack Chain"
+
+  - id: ASVS-RPT-02
+    category: STRUCTURAL
+    description: "Report includes chapter evidence for V2 Authentication"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["ASVS Requirement", "V2."]
+    case_insensitive: true
+
+  - id: ASVS-RPT-03
+    category: STRUCTURAL
+    description: "Report includes chapter evidence for V5 Input Validation"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["ASVS Requirement", "V5."]
+    case_insensitive: true
+
+  # Behavioral — key failures detected
+  - id: ASVS-BEH-01
+    category: BEHAVIORAL
+    description: "SQL injection finding (V5)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["SQL", "injection"]
+    case_insensitive: true
+
+  - id: ASVS-BEH-02
+    category: BEHAVIORAL
+    description: "Hardcoded secret finding (V6)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["JWT_SECRET", "hardcoded"]
+    case_insensitive: true
+
+  - id: ASVS-BEH-03
+    category: BEHAVIORAL
+    description: "MD5 legacy password finding (V2)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["MD5", "legacy"]
+    case_insensitive: true
+
+  - id: ASVS-BEH-04
+    category: BEHAVIORAL
+    description: "Missing rate limiting finding (V11)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["rate limit"]
+    case_insensitive: true
+
+  - id: ASVS-BEH-05
+    category: BEHAVIORAL
+    description: "Path traversal finding (V12)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["path traversal"]
+    case_insensitive: true
+
+  - id: ASVS-BEH-06
+    category: BEHAVIORAL
+    description: "Missing RBAC finding (V4)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["access control"]
+    case_insensitive: true
+
+  # Behavioral — key passes NOT flagged
+  - id: ASVS-BEH-07
+    category: BEHAVIORAL
+    description: "bcrypt recognized as pass (V2)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["bcrypt", "PASS"]
+    case_insensitive: true
+
+  - id: ASVS-BEH-08
+    category: BEHAVIORAL
+    description: "Parameterized queries recognized as pass (V5)"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["parameterized"]
+    case_insensitive: true
+
+  - id: ASVS-STR-03
+    category: STRUCTURAL
+    description: "V5 chapter report references taint analysis"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["taint", "data flow"]
+    case_insensitive: true

@@ -1,0 +1,138 @@
+skill_version: "1.1.0"
+last_validated: "2026-03-09"
+fixture: basic_webapp
+description: >
+  CAS-Compliant Builder skill — code generation skill.
+  Builder skills do not produce .ai/ data artifacts; they generate source code
+  into the target repository. Testing strategy: STABLE assertions verify the
+  skill file exists and cas_rule_definitions.md is present and well-formed.
+  Functional correctness is verified by manual invocation and code review.
+
+assertions:
+  # --- STABLE: Skill file and rule definitions presence ---
+
+  - id: CAS-BLD-STB-01
+    category: STABLE
+    description: "skills/15-cas-compliant-builder.md exists"
+    type: file_exists
+    path: "../skills/15-cas-compliant-builder.md"
+
+  - id: CAS-BLD-STB-02
+    category: STABLE
+    description: "shared/cas_rule_definitions.md exists"
+    type: file_exists
+    path: "../shared/cas_rule_definitions.md"
+
+  - id: CAS-BLD-STB-03
+    category: STABLE
+    description: "Builder skill references cas_rule_definitions.md"
+    type: text_present
+    path: "../skills/15-cas-compliant-builder.md"
+    patterns:
+      - "shared/cas_rule_definitions.md"
+
+  - id: CAS-BLD-STB-04
+    category: STABLE
+    description: "Builder skill contains Domain Selection Guide"
+    type: text_present
+    path: "../skills/15-cas-compliant-builder.md"
+    patterns:
+      - "Domain Selection Guide"
+
+  - id: CAS-BLD-STB-05
+    category: STABLE
+    description: "Builder skill documents excluded patterns"
+    type: text_present
+    path: "../skills/15-cas-compliant-builder.md"
+    patterns:
+      - "Excluded Patterns"
+
+  - id: CAS-BLD-STB-06
+    category: STABLE
+    description: "Builder skill Phase 2 instructs selective loading (not full file)"
+    type: text_present
+    path: "../skills/15-cas-compliant-builder.md"
+    patterns:
+      - "Platform Context"
+      - "selective"
+
+  - id: CAS-BLD-STB-07
+    category: STABLE
+    description: "cas_rule_definitions.md Section Loading Guide specifies selective loading for builder"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "Domain Selection Guide"
+      - "Do NOT load the full file"
+
+  # --- STRUCTURAL: cas_rule_definitions.md structure ---
+
+  - id: CAS-BLD-STR-01
+    category: STRUCTURAL
+    description: "cas_rule_definitions.md has Section Loading Guide"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "Section Loading Guide"
+
+  - id: CAS-BLD-STR-02
+    category: STRUCTURAL
+    description: "cas_rule_definitions.md has Platform Context"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "Platform Context"
+
+  - id: CAS-BLD-STR-03
+    category: STRUCTURAL
+    description: "cas_rule_definitions.md contains AUTH rules"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "AUTH-001"
+
+  - id: CAS-BLD-STR-04
+    category: STRUCTURAL
+    description: "cas_rule_definitions.md contains LOG rules"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "LOG-001"
+
+  - id: CAS-BLD-STR-05
+    category: STRUCTURAL
+    description: "cas_rule_definitions.md contains ENC rules"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "ENC-001"
+
+  - id: CAS-BLD-STR-06
+    category: STRUCTURAL
+    description: "cas_rule_definitions.md has ITSG-33 index"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "ITSG-33"
+
+  - id: CAS-BLD-STR-08
+    category: STRUCTURAL
+    description: "cas_rule_definitions.md has Domain to Section Heading Map for builder selective loading"
+    type: text_present
+    path: "../shared/cas_rule_definitions.md"
+    patterns:
+      - "Domain → Section Heading Map"
+
+  - id: CAS-BLD-STR-07
+    category: STRUCTURAL
+    description: "CAS assessment skill references cas_rule_definitions.md"
+    type: text_present
+    path: "../skills/06-cas-compliance.md"
+    patterns:
+      - "shared/cas_rule_definitions.md"
+
+# NOTE: No BEHAVIORAL assertions for builder skills.
+# Behavioral correctness (does the generated code satisfy CAS rules?) is verified
+# by manual invocation in a Claude session targeting the basic_webapp fixture,
+# followed by running cybersecurity_architecture_standards_skill against the code.
+# Add BEHAVIORAL assertions here when automated invocation is available (see MAINTENANCE.md TODO b).

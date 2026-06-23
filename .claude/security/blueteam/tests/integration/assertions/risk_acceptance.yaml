@@ -1,0 +1,158 @@
+skill_version: "1.0.0"
+last_validated: "2026-03-05"
+fixture: risk_acceptance_app
+description: >
+  Risk Acceptance Processing (Step 13 of ai_artifacts_schema.md).
+  Tests all 13 TCs from the existing risk acceptance test harness.
+
+assertions:
+  # Output files
+  - id: RA-OUT-01
+    category: STABLE
+    description: "ASVS report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+
+  - id: RA-OUT-02
+    category: STABLE
+    description: "risk_register.md created"
+    type: file_exists
+    path: ".ai/blueteam/reports/risk_register.md"
+
+  # TC-01: RA-001 active — suppresses finding
+  - id: RA-TC01
+    category: BEHAVIORAL
+    description: "TC-01: RA-001 (active) — finding suppressed from main section; in Known Accepted Risks"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["Known Accepted Risks", "RA-001"]
+
+  # TC-02: RA-002 expired — NOT suppressed, appears in Expired Acceptances
+  - id: RA-TC02
+    category: BEHAVIORAL
+    description: "TC-02: RA-002 (expired) — appears in Expired Acceptances table"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["Expired", "RA-002"]
+
+  # TC-03: RA-003 pending — NOT suppressed, appears in Pending Acceptances
+  - id: RA-TC03
+    category: BEHAVIORAL
+    description: "TC-03: RA-003 (pending) — appears in Pending Acceptances table"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["Pending", "RA-003"]
+
+  # TC-04: RA-004 active HIGH — advisory note present
+  - id: RA-TC04
+    category: BEHAVIORAL
+    description: "TC-04: RA-004 (active HIGH) — high severity advisory present"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["RA-004"]
+
+  # TC-05: RA-005 hardcoded secret — non-suppressible, SUPPRESSION_REJECTED anomaly
+  - id: RA-TC05
+    category: BEHAVIORAL
+    description: "TC-05: RA-005 hardcoded secret — SUPPRESSION_REJECTED anomaly"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["SUPPRESSION_REJECTED", "RA-005"]
+
+  # TC-06: RA-099 marker with no register entry — UNAUTHORIZED_SUPPRESSION
+  - id: RA-TC06
+    category: BEHAVIORAL
+    description: "TC-06: RA-099 marker without register entry — UNAUTHORIZED_SUPPRESSION anomaly"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["UNAUTHORIZED_SUPPRESSION"]
+
+  # TC-07: RA-007 withdrawn, no marker — no STALE anomaly (withdrawn exempt)
+  - id: RA-TC07
+    category: BEHAVIORAL
+    description: "TC-07: RA-007 (withdrawn) — appears in Withdrawn table, no STALE anomaly for it"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["Withdrawn", "RA-007"]
+
+  # TC-08: RA-008 dual anomaly — STALE_REGISTER_ENTRY + OUT_OF_SCOPE_SUPPRESSION
+  - id: RA-TC08
+    category: BEHAVIORAL
+    description: "TC-08: RA-008 dual anomaly — STALE_REGISTER_ENTRY and OUT_OF_SCOPE_SUPPRESSION"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["STALE_REGISTER_ENTRY", "OUT_OF_SCOPE_SUPPRESSION", "RA-008"]
+
+  # TC-09: RA-006 no marker in code — STALE_REGISTER_ENTRY
+  - id: RA-TC09
+    category: BEHAVIORAL
+    description: "TC-09: RA-006 (no marker) — STALE_REGISTER_ENTRY anomaly"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["STALE_REGISTER_ENTRY", "RA-006"]
+
+  # TC-10: RA-009 SQL comment style marker — valid
+  - id: RA-TC10
+    category: BEHAVIORAL
+    description: "TC-10: RA-009 SQL comment marker — RA-009 in Known Accepted Risks"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["RA-009"]
+
+  # TC-11: RA-010 shell comment style marker — valid pending
+  - id: RA-TC11
+    category: BEHAVIORAL
+    description: "TC-11: RA-010 shell comment marker — RA-010 in Pending Acceptances"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["RA-010"]
+
+  # TC-12: CODEOWNERS not protecting register — self-service badge
+  - id: RA-TC12
+    category: BEHAVIORAL
+    description: "TC-12: CODEOWNERS not protecting register — self-service governance badge"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["Self-service", "CODEOWNERS"]
+    case_insensitive: true
+
+  # TC-13: XSS finding (no RA marker) appears normally
+  - id: RA-TC13
+    category: BEHAVIORAL
+    description: "TC-13: Normal XSS finding without RA marker appears in main findings"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["XSS", "v-html", "UserList"]
+    case_insensitive: true
+
+  # Counters
+  - id: RA-CNT-01
+    category: BEHAVIORAL
+    description: "Completion report: 4 active acceptances"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["4 active"]
+    case_insensitive: true
+
+  - id: RA-CNT-02
+    category: BEHAVIORAL
+    description: "Completion report: 5 anomalies"
+    type: text_present
+    path: ".ai/blueteam/reports/asvs_level2_security_assessment.md"
+    patterns: ["5 anomal"]
+    case_insensitive: true
+
+  # Risk register
+  - id: RA-REG-01
+    category: STRUCTURAL
+    description: "risk_register.md has governance badge section"
+    type: section_present
+    path: ".ai/blueteam/reports/risk_register.md"
+    pattern: "Governance"
+
+  - id: RA-REG-02
+    category: STRUCTURAL
+    description: "risk_register.md has Anomalies section"
+    type: section_present
+    path: ".ai/blueteam/reports/risk_register.md"
+    pattern: "Anomal"

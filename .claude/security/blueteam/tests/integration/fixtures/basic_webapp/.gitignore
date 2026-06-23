@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.db
+*.sqlite
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+coverage/
+data/
+exports/

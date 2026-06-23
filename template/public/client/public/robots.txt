@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /settings
+Disallow: /notifications
+Disallow: /subscriptions
+Disallow: /files
+Disallow: /forms
+Disallow: /api/
+
+# Sitemap directive requires a fully-qualified URL per the spec; relative paths
+# fail Lighthouse "robots.txt is not valid". Templates can't hard-code a host,
+# so we omit the directive here. After deploying, append:
+#   Sitemap: https://your-app-host.example.com/sitemap.xml

@@ -1,0 +1,18 @@
+# Test fixture temporary directories (created by setup.py at test time)
+# These contain nested .git repos and must not be tracked by the parent repo
+fixtures/tmp/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# pytest cache
+.pytest_cache/
+
+# Test run artefacts (not source-controlled)
+*.log
+
+# Python virtual environments
+venv/

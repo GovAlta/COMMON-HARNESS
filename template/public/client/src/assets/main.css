@@ -1,0 +1,388 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Font display override — primeicons ships @font-face with
+   font-display: block, which blocks render up to 3s on slow
+   connections (Lighthouse "Ensure text remains visible" audit).
+   Re-declare with font-display: swap so the icon font falls
+   back to system glyphs (or invisible) while it loads, then
+   swaps in seamlessly. This rule wins because main.css is
+   imported AFTER 'primeicons/primeicons.css' in main.ts.
+   ============================================================ */
+@font-face {
+  font-family: 'primeicons';
+  font-display: swap;
+  src: url('primeicons/fonts/primeicons.woff2') format('woff2'),
+       url('primeicons/fonts/primeicons.woff') format('woff'),
+       url('primeicons/fonts/primeicons.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-jakarta: 'Plus Jakarta Sans', sans-serif;
+  --font-geist: 'Geist', sans-serif;
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --color-brand-accent: #0d9488;
+  --color-brand-dark: #0f172a;
+}
+
+/* ============================================================
+   PrimeVue Component Overrides
+   ============================================================ */
+
+.p-datatable .p-datatable-thead > tr > th {
+  background: var(--color-slate-50);
+  color: var(--color-slate-700);
+  font-family: 'Geist', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-slate-200);
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  font-family: 'Geist', sans-serif;
+  font-size: 0.875rem;
+  color: var(--color-slate-600);
+  border-bottom: 1px solid var(--color-slate-100);
+}
+
+.p-datatable .p-datatable-tbody > tr:hover > td {
+  background: var(--color-slate-50);
+}
+
+.p-tabs .p-tab.p-tab-active {
+  color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+}
+
+.p-tab {
+  font-family: 'Geist', sans-serif !important;
+}
+
+.p-multiselect, .p-dropdown, .p-select, .p-inputtext, .p-calendar, .p-datepicker-input {
+  border-radius: 0.75rem !important;
+  border-color: var(--color-slate-300) !important;
+  font-family: 'Geist', sans-serif !important;
+}
+
+.p-button {
+  border-radius: 0.5rem;
+  font-family: 'Geist', sans-serif;
+}
+
+.p-paginator {
+  font-family: 'Geist', sans-serif;
+}
+
+.p-dialog .p-dialog-header {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.p-menubar {
+  border: none;
+  background: transparent;
+  font-family: 'Geist', sans-serif;
+}
+
+.p-card {
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+/* FormKit validation error styling — border is on .formkit-inner, not .formkit-input */
+[data-invalid] .formkit-inner {
+  border-color: var(--color-red-500, #ef4444) !important;
+  --tw-ring-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+[data-invalid] .formkit-label {
+  color: var(--color-red-600, #dc2626);
+}
+
+/* ============================================================
+   Leaflet Overrides
+   ============================================================ */
+
+.leaflet-container {
+  border-radius: 1rem;
+  z-index: 1;
+}
+
+/* ============================================================
+   Custom Scrollbar
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-300);
+  border-radius: 3px;
+}
+
+/* ============================================================
+   Code Block Styling
+   ============================================================ */
+
+.code-block {
+  background: var(--color-slate-900);
+  color: #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-family: 'Geist Mono', 'Fira Code', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  overflow-wrap: break-word;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .code-block {
+    padding: 1.25rem;
+    word-break: normal;
+  }
+}
+
+.code-block .key { color: #93c5fd; }
+.code-block .string { color: #86efac; }
+.code-block .number { color: #fbbf24; }
+.code-block .comment { color: #64748b; }
+.code-block .method { color: #c4b5fd; }
+
+/* ============================================================
+   Skip Navigation (Accessibility)
+   ============================================================ */
+
+.skip-nav {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary-600);
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 0.5rem 0;
+}
+
+.skip-nav:focus {
+  top: 0;
+}
+
+/* ============================================================
+   Reduced Motion
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   THEME OVERRIDES
+   Tailwind v4 uses CSS custom properties for all colors.
+   Overriding --color-slate-* and --color-indigo-* on <html>
+   changes every Tailwind class that references them.
+   ============================================================ */
+
+/* --- DARK THEME --- */
+html.theme-dark {
+  color-scheme: dark;
+  --color-slate-50: #0f172a;
+  --color-slate-100: #1e293b;
+  --color-slate-200: #334155;
+  --color-slate-300: #475569;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #f1f5f9;
+  --color-slate-900: #f8fafc;
+  --color-indigo-50: #1e1b4b;
+  --color-indigo-100: #312e81;
+  --color-indigo-200: #3730a3;
+  --color-indigo-300: #4338ca;
+  --color-indigo-400: #6366f1;
+  --color-indigo-500: #818cf8;
+  --color-indigo-600: #818cf8;
+  --color-indigo-700: #a5b4fc;
+  --color-white: #0f172a;
+  --color-teal-50: #042f2e;
+  --color-teal-100: #134e4a;
+  --color-teal-600: #2dd4bf;
+  --color-purple-50: #2e1065;
+  --color-purple-100: #3b0764;
+  --color-purple-600: #a78bfa;
+  --color-amber-50: #451a03;
+  --color-amber-100: #78350f;
+  --color-amber-200: #92400e;
+  --color-amber-600: #fbbf24;
+  --color-amber-700: #f59e0b;
+  --color-amber-800: #fbbf24;
+  --color-green-50: #052e16;
+  --color-green-100: #14532d;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-700: #86efac;
+  --color-green-900: #dcfce7;
+  --color-rose-50: #4c0519;
+  --color-rose-600: #fb7185;
+  --color-blue-100: #1e3a5f;
+  --color-blue-700: #93c5fd;
+  --color-primary-50: #1e1b4b;
+  --color-primary-100: #312e81;
+  --color-primary-600: #818cf8;
+}
+
+html.theme-dark .code-block {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+html.theme-dark .leaflet-container {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* --- WARM THEME --- */
+html.theme-warm {
+  --color-slate-50: #faf7f2;
+  --color-slate-100: #f5f0e8;
+  --color-slate-200: #e7dfd3;
+  --color-slate-300: #c8bba8;
+  --color-slate-400: #a89985;
+  --color-slate-500: #8a7a66;
+  --color-slate-600: #5c4f3d;
+  --color-slate-700: #44382a;
+  --color-slate-800: #33291d;
+  --color-slate-900: #271e14;
+  --color-indigo-50: #fffbeb;
+  --color-indigo-100: #fef3c7;
+  --color-indigo-200: #fde68a;
+  --color-indigo-300: #fcd34d;
+  --color-indigo-400: #fbbf24;
+  --color-indigo-500: #f59e0b;
+  --color-indigo-600: #d97706;
+  --color-indigo-700: #b45309;
+  --color-white: #fffcf7;
+  --color-primary-50: #fffbeb;
+  --color-primary-100: #fef3c7;
+  --color-primary-600: #d97706;
+}
+
+/* --- OCEAN THEME --- */
+html.theme-ocean {
+  --color-slate-50: #f0f9ff;
+  --color-slate-100: #e0f2fe;
+  --color-indigo-50: #ecfeff;
+  --color-indigo-100: #cffafe;
+  --color-indigo-200: #a5f3fc;
+  --color-indigo-300: #67e8f9;
+  --color-indigo-400: #22d3ee;
+  --color-indigo-500: #06b6d4;
+  --color-indigo-600: #0891b2;
+  --color-indigo-700: #0e7490;
+  --color-primary-50: #ecfeff;
+  --color-primary-100: #cffafe;
+  --color-primary-600: #0891b2;
+}
+
+/* --- FOREST THEME --- */
+html.theme-forest {
+  --color-slate-50: #f6f7f4;
+  --color-slate-100: #ecefe8;
+  --color-indigo-50: #ecfdf5;
+  --color-indigo-100: #d1fae5;
+  --color-indigo-200: #a7f3d0;
+  --color-indigo-300: #6ee7b7;
+  --color-indigo-400: #34d399;
+  --color-indigo-500: #10b981;
+  --color-indigo-600: #059669;
+  --color-indigo-700: #047857;
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-600: #059669;
+}
+
+/* Smooth transitions when switching themes */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ─── FormKit polish ────────────────────────────────────────────────────────
+   These rules take FormKit's auto-rendered controls from "looks like raw
+   HTML" to "fits the PrimeVue/slate visual system". Three things:
+
+   1. Required-field indicator. FormKit sets `data-required="true"` on the
+      `.formkit-outer` of any required field automatically. We append a red
+      `*` to the label via a pseudo-element on the matching descendant
+      label, scoped through the `.formkit-required-asterisk` hook on the
+      label and the `[data-required]` attribute selector on the outer.
+
+   2. Native <select> styling. The browser draws its own chevron + control
+      box inside our styled wrapper, which looks inconsistent. We strip the
+      native appearance and paint our own caret via an inline SVG. Result
+      matches the PrimeVue Select look-and-feel.
+
+   3. <input type="date"> max-year cap. The native control accepts 7-digit
+      years if the user keeps typing. There's no purely-CSS way to enforce a
+      max; the cap is set via the `max` attribute in FormSubmitPage's field
+      bindings. Documented here because it shows up in the form polish pass.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.formkit-outer[data-required="true"] .formkit-required-asterisk::after {
+  content: ' *';
+  color: #dc2626; /* red-600 */
+  font-weight: 600;
+  margin-left: 0.125rem;
+}
+
+.formkit-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 12px 8px;
+  cursor: pointer;
+}
+
+/* Native date/time controls — the calendar/clock indicator is the only
+   browser-rendered piece left after we wrap them. Nudge it inward so it
+   doesn't sit flush against the rounded right edge. */
+.formkit-input[type="date"]::-webkit-calendar-picker-indicator,
+.formkit-input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.formkit-input[type="time"]::-webkit-calendar-picker-indicator,
+.formkit-input[type="month"]::-webkit-calendar-picker-indicator,
+.formkit-input[type="week"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  margin-right: 0.5rem;
+}
+.formkit-input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.formkit-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

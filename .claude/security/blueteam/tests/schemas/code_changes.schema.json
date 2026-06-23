@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "code_changes.schema.json",
+  "title": "code_changes.json",
+  "description": "Schema for .ai/blueteam/data/code_changes.json — code-level fixes required to remediate security findings",
+  "type": "object",
+  "required": ["schema_version", "last_updated", "generated_by_assessments", "changes"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version string, e.g. \"1.0\""
+    },
+    "last_updated": {
+      "type": "string",
+      "description": "ISO 8601 date of last write (YYYY-MM-DD)"
+    },
+    "generated_by_assessments": {
+      "type": "array",
+      "description": "List of assessment report names (without .md extension) that contributed entries",
+      "items": { "type": "string" }
+    },
+    "changes": {
+      "type": "array",
+      "description": "Code-level fixes derived from assessment findings",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "priority",
+          "file_path",
+          "line_reference",
+          "change_type",
+          "description",
+          "sources",
+          "cas_rules",
+          "asvs_requirements",
+          "related_requirement_ids"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^CC-\\d+$",
+            "description": "Sequential identifier: CC-001, CC-002, etc. Never reused or renumbered."
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Imperative verb phrase describing the change, max 80 chars"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Priority derived from the highest severity source finding"
+          },
+          "file_path": {
+            "type": "string",
+            "description": "Repo-relative path using forward slashes"
+          },
+          "line_reference": {
+            "type": ["string", "integer", "null"],
+            "description": "Line number (e.g. 118), range (e.g. 162-177), or null for whole-file changes"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": ["fix", "add", "remove", "refactor"],
+            "description": "Nature of the change"
+          },
+          "description": {
+            "type": "string",
+            "description": "What must change, why it matters, and the consequence of not fixing — 2-3 sentences"
+          },
+          "current_code_summary": {
+            "type": ["string", "null"],
+            "description": "Single sentence describing the vulnerable construct; null for pure additions"
+          },
+          "replacement_code": {
+            "type": ["string", "null"],
+            "description": "The exact replacement code; null when extracted from threat model"
+          },
+          "acceptance_criteria": {
+            "type": ["array", "string", "null"],
+            "description": "Criteria verifying the change is complete and correct"
+          },
+          "sources": {
+            "type": "array",
+            "description": "References to source findings in assessment reports",
+            "items": {
+              "type": "object",
+              "required": ["assessment", "finding_id"],
+              "additionalProperties": true,
+              "properties": {
+                "assessment": { "type": "string" },
+                "finding_id": { "type": "string" }
+              }
+            }
+          },
+          "cas_rules": {
+            "type": "array",
+            "description": "CAS rule IDs this change addresses; empty array if none",
+            "items": { "type": "string" }
+          },
+          "asvs_requirements": {
+            "type": "array",
+            "description": "ASVS requirement IDs (e.g. V2.2.1); empty array if none",
+            "items": { "type": "string" }
+          },
+          "related_requirement_ids": {
+            "type": "array",
+            "description": "SR-NNN IDs from security_requirements.json; populated during merge",
+            "items": {
+              "type": "string",
+              "pattern": "^SR-\\d+$"
+            }
+          },
+          "callsite_impact": {
+            "type": ["object", "null"],
+            "additionalProperties": true,
+            "description": "Present when this change modifies a function or method signature"
+          },
+          "scope_check": {
+            "type": ["object", "null"],
+            "additionalProperties": true,
+            "description": "Present when the fix may need to be applied at additional code paths"
+          }
+        }
+      }
+    }
+  }
+}

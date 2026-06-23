@@ -1,0 +1,153 @@
+skill_version: "unknown"
+last_validated: "2026-03-05"
+fixture: basic_webapp
+description: "Threat Model skill — STRIDE/DREAD analysis and kill chains"
+
+assertions:
+  # ----- Output artifacts -----
+
+  - id: TM-OUT-01
+    category: STABLE
+    description: "Threat model report created"
+    type: file_exists
+    path: ".ai/blueteam/reports/threat_model.md"
+
+  - id: TM-OUT-02
+    category: STABLE
+    description: "code_changes.json created or updated"
+    type: file_exists
+    path: ".ai/blueteam/data/code_changes.json"
+
+  - id: TM-OUT-03
+    category: STABLE
+    description: "code_changes.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/code_changes.json"
+
+  - id: TM-OUT-03B
+    category: STABLE
+    description: "verification_tests.json created or updated"
+    type: file_exists
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  - id: TM-OUT-03C
+    category: STABLE
+    description: "verification_tests.json is valid JSON"
+    type: json_valid
+    path: ".ai/blueteam/data/verification_tests.json"
+
+  # Step 0.1 prerequisite: classification skill must produce both YAML files.
+  # TM-OUT-04/05 detect the bypass where a background agent writes security-classification.yaml
+  # inline (wrong schema) and skips the classification skill entirely, leaving
+  # security-classification-details.yaml absent. Caught in 2026-03-06 CFS session.
+  - id: TM-OUT-04
+    category: STABLE
+    description: "security-classification.yaml produced by classification skill (Step 0.1)"
+    type: file_exists
+    path: ".ai/blueteam/data/security-classification.yaml"
+
+  - id: TM-OUT-05
+    category: STABLE
+    description: "security-classification-details.yaml produced by classification skill (Step 0.1)"
+    type: file_exists
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+
+  # Step 0.4 outputs: human-readable classification report + HTML
+  - id: TM-OUT-06
+    category: STABLE
+    description: "security-classification.md produced by threat model Step 0.4"
+    type: file_exists
+    path: ".ai/blueteam/reports/security-classification.md"
+
+  - id: TM-OUT-07
+    category: STABLE
+    description: "security-classification.html produced by threat model Step 0.4"
+    type: file_exists
+    path: ".ai/blueteam/reports/security-classification.html"
+
+  # Schema conformance: the classification YAML must be written by the classification
+  # skill (conformant schema), not inline by the threat model agent.
+  # The canonical schema has 'application:' as a top-level key (set by the classification skill).
+  # An inline write by the threat model agent uses 'classification:' instead — detectable as a bypass.
+  # Note: these files are YAML; text_present is used (json_field_exists requires JSON).
+  - id: TM-STR-01
+    category: STRUCTURAL
+    description: "security-classification.yaml has conformant 'application:' top-level key (not inline bypass schema)"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification.yaml"
+    patterns: ["application:"]
+    case_insensitive: false
+
+  - id: TM-STR-02
+    category: STRUCTURAL
+    description: "security-classification-details.yaml has 'data_stores:' key"
+    type: text_present
+    path: ".ai/blueteam/data/security-classification-details.yaml"
+    patterns: ["data_stores:"]
+    case_insensitive: false
+
+  # ----- Report structure -----
+
+  - id: TM-RPT-01
+    category: STRUCTURAL
+    description: "Report has Kill Chain Analysis section"
+    type: section_present
+    path: ".ai/blueteam/reports/threat_model.md"
+    pattern: "Kill Chain"
+
+  - id: TM-RPT-02
+    category: STRUCTURAL
+    description: "Report has STRIDE threat section"
+    type: section_present
+    path: ".ai/blueteam/reports/threat_model.md"
+    pattern: "STRIDE"
+
+  - id: TM-RPT-03
+    category: STRUCTURAL
+    description: "Report has DREAD scoring"
+    type: text_present
+    path: ".ai/blueteam/reports/threat_model.md"
+    patterns: ["DREAD"]
+
+  # ----- Behavioral — key vulnerabilities detected -----
+
+  - id: TM-BEH-01
+    category: BEHAVIORAL
+    description: "SQL injection threat identified"
+    type: text_present
+    path: ".ai/blueteam/reports/threat_model.md"
+    patterns: ["SQL", "injection"]
+
+  - id: TM-BEH-02
+    category: BEHAVIORAL
+    description: "Path traversal threat identified"
+    type: text_present
+    path: ".ai/blueteam/reports/threat_model.md"
+    patterns: ["path traversal"]
+    case_insensitive: true
+
+  - id: TM-BEH-03
+    category: BEHAVIORAL
+    description: "Hardcoded secret threat identified"
+    type: text_present
+    path: ".ai/blueteam/reports/threat_model.md"
+    patterns: ["hardcoded", "JWT"]
+    case_insensitive: true
+
+  - id: TM-BEH-04
+    category: BEHAVIORAL
+    description: "CORS misconfiguration identified"
+    type: text_present
+    path: ".ai/blueteam/reports/threat_model.md"
+    patterns: ["CORS"]
+
+  # ----- ID format -----
+
+  - id: TM-ID-01
+    category: STABLE
+    description: "CC-NNN IDs present in code_changes.json"
+    type: json_field_regex
+    path: ".ai/blueteam/data/code_changes.json"
+    field: "changes"
+    id_field: "id"
+    pattern: "^CC-\\d{3}$"
